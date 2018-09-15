@@ -1,0 +1,11 @@
+language: elixir
+elixir:
+  - 1.6.5
+otp_release:
+  - 21.0.5
+before_script:
+  - MIX_ENV=test mix deps.get
+  - MIX_ENV=test mix deps.compile
+  - MIX_ENV=test mix compile
+script:
+  - MIX_ENV=test mix test
