@@ -252,7 +252,7 @@ defmodule AyeSQL do
 
   ```elixir
   def deps do
-    [{:ayesql, "~> 0.1.0"}]
+    [{:ayesql, "~> 0.1"}]
   end
   ```
   """

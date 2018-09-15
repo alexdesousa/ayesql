@@ -47,7 +47,15 @@ defmodule Ayesql.MixProject do
   defp package do
     [
       description: "Library for using raw SQL",
-      files: ["src", "lib", "mix.exs", "README.md", "test/support"],
+      files: [
+        "src/queries_lexer.xrl",
+        "src/queries_parser.yrl",
+        "lib",
+        "test/support",
+        "mix.exs",
+        "LICENSE",
+        "README.md"
+      ],
       maintainers: ["Alexander de Sousa"],
       licenses: ["MIT"],
       links: %{
