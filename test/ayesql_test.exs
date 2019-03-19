@@ -188,5 +188,15 @@ defmodule AyeSQLTest do
       }
       assert {:ok, {^stmt, ^args}} = Queries.get_avg_ram(params)
     end
+
+    test "throws exception if .sql file not found" do
+      assert_raise File.Error, fn ->
+        defmodule Queries do
+          use AyeSQL
+
+          defqueries("no-existing-file.sql")
+        end
+      end
+    end
   end
 end
