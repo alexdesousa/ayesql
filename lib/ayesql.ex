@@ -356,8 +356,8 @@ defmodule AyeSQL do
   ```
   """
   defmacro defqueries(file) do
-    with {:ok, contents}  <- File.read(file),
-         {:ok, tokens, _} <- :queries_lexer.tokenize(contents),
+    contents = File.read!(file)
+    with {:ok, tokens, _} <- :queries_lexer.tokenize(contents),
          {:ok, ast}       <- :queries_parser.parse(tokens) do
       functions =
         ast
