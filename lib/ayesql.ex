@@ -362,11 +362,16 @@ defmodule AyeSQL do
       functions =
         ast
         |> Enum.map(&AyeSQL.create_query/1)
-      for function <- functions do
+      functions_macro = for function <- functions do
         quote do
           unquote(function)
         end
       end
+      external_resource_macro = quote do
+        @external_resource unquote(file)
+      end
+
+      [functions_macro, external_resource_macro]
     end
   end
 

@@ -189,6 +189,18 @@ defmodule AyeSQLTest do
       assert {:ok, {^stmt, ^args}} = Queries.get_avg_ram(params)
     end
 
+    test "tags module with an @external_resource" do
+      defmodule ExternalResources do
+        use AyeSQL
+        defqueries "test/support/queries.sql"
+
+        def info do
+          @external_resource
+        end
+      end
+      assert ExternalResources.info == ["test/support/queries.sql"]
+    end
+
     test "throws exception if .sql file not found" do
       assert_raise File.Error, fn ->
         defmodule Queries do
