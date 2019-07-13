@@ -25,8 +25,8 @@ arguments = ["server_0", "server_1", "server_2", "Barcelona"]
 Postgrex.query(conn, query, arguments)
 ```
 
-Adding more `hostname`s to the previous query is a nightmare, involving
-`binary()` manipulation to add the correct index to the query.
+Adding more `hostname`s to the previous query is a nightmare, editing strings
+to add the correct index to the query.
 
 Thankfully, we have [Ecto](https://github.com/elixir-ecto/ecto), which provides
 a great DSL for generating database queries at runtime. The same query in Ecto
@@ -83,6 +83,7 @@ dates =
            interval '1 day'
          )::date AS d
   """
+
 from(
   c in "clicks",
   right_join: day in fragment(dates, ^days),
@@ -152,13 +153,13 @@ And then we could execute the query as follows:
 ```elixir
 iex(1)> params = %{
 iex(1)>   link_id: 42,
-iex(1)>   days: %Postgrex.Interval{secs: 864000} # 10 days
+iex(1)>   days: %Postgrex.Interval{secs: 864_000} # 10 days
 iex(1)> }
-iex(2)> Queries.get_avg_clicks(params, run? true)
+iex(2)> Queries.get_avg_clicks(params, run?: true)
 {:ok, %Postgrex.Result{...}}
 ```
 
-## Basic syntax
+## Syntax
 
 A SQL file can have as many queries as you want as long as:
 
@@ -241,7 +242,7 @@ Let's say we have the following query loaded in the module `Server`:
 It is possible to do the following:
 
 ```elixir
-iex(1)> query = &Server.get_server/2
+iex(1)> query = &Server.get_servers/2
 iex(2)> params = %{hostnames: query, location: "Barcelona", region: "Spain"}
 iex(3)> Server.get_avg_ram(params, run?: true)
 {:ok, %Postgrex.Result{...}}
