@@ -1,5 +1,5 @@
 defmodule AyeSQL.QueriesLexerTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
   test "ignores comment" do
     comment = "-- Some comment\n"

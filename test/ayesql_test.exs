@@ -1,202 +1,220 @@
 defmodule AyeSQLTest do
-  use ExUnit.Case
+  use ExUnit.Case, async: true
 
-  describe "join_fragments/2" do
-    test "joins the binaries and keeps the atoms separated" do
-      values =
-        [:foo, "word", "(", :bar, ")", "other_word", :baz]
-        |> AyeSQL.join_fragments([])
-      assert ["", :foo, "word (", :bar, ") other_word", :baz] = values
-    end
-  end
-
-  describe "expand_binary_fn/1" do
-    test "expands a binary" do
-      function = AyeSQL.expand_binary_fn("foo")
-
-      assert is_function(function)
-      assert {:ok, {1, ["foo"], []}} = function.({1, [], []}, %{})
-    end
-  end
-
-  describe "expand_function_fn/2" do
-    test "expands a function" do
-      stmt =
-        "SELECT (datetime::date) AS date, (datetime::time) AS time " <>
-        "FROM generate_series( $1::timestamp, $2::timestamp + " <>
-        "$3::interval - $4::interval, $5::interval ) AS datetime"
-      arguments = ["step", "step", "interval", "start", "start"]
-
-      params = %{
-        start: "start",
-        step: "step",
-        interval: "interval"
-      }
-      function = AyeSQL.expand_function_fn(Queries, :get_interval)
-
-      assert is_function(function)
-      assert {:ok, {6, [^stmt], ^arguments}} = function.({1, [], []}, params)
-    end
-  end
-
-  describe "expand_params_fn/1" do
-    test "expands a normal param" do
-      params = %{server: "hostname"}
-      function = AyeSQL.expand_param_fn(:server)
-
-      assert is_function(function)
-      assert {:ok, {2, ["$1"], ["hostname"]}} = function.({1, [], []}, params)
-    end
-
-    test "expands a query function closure" do
-      stmt =
-        "SELECT (datetime::date) AS date, (datetime::time) AS time " <>
-        "FROM generate_series( $1::timestamp, $2::timestamp + " <>
-        "$3::interval - $4::interval, $5::interval ) AS datetime"
-      arguments = ["step", "step", "interval", "start", "start"]
-
-      params = %{
-        run_interval: &Queries.get_interval/2,
-        start: "start",
-        step: "step",
-        interval: "interval"
-      }
-      function = AyeSQL.expand_param_fn(:run_interval)
-
-      assert is_function(function)
-      assert {:ok, {6, [^stmt], ^arguments}} = function.({1, [], []}, params)
-    end
-
-    test "expands an in tuple" do
-      params = %{servers: {:in, [1, 2, 3]}}
-      function = AyeSQL.expand_param_fn(:servers)
-
-      assert is_function(function)
-      assert {:ok, {4, ["$1,$2,$3"], [3, 2, 1]}} =
-             function.({1, [], []}, params)
-    end
-  end
-
-  describe "do_expand/2" do
-    test "expands a binary" do
-      function = AyeSQL.do_expand(Queries, "foo")
-
-      assert is_function(function)
-      assert {:ok, {1, ["foo"], []}} = function.({1, [], []}, %{})
-    end
-
-    test "expands a function" do
-      stmt =
-        "SELECT (datetime::date) AS date, (datetime::time) AS time " <>
-        "FROM generate_series( $1::timestamp, $2::timestamp + " <>
-        "$3::interval - $4::interval, $5::interval ) AS datetime"
-      arguments = ["step", "step", "interval", "start", "start"]
-
-      params = %{
-        start: "start",
-        step: "step",
-        interval: "interval"
-      }
-      function = AyeSQL.do_expand(Queries, :get_interval)
-
-      assert is_function(function)
-      assert {:ok, {6, [^stmt], ^arguments}} = function.({1, [], []}, params)
-    end
-
-    test "expands a param" do
-      params = %{server: "hostname"}
-      function = AyeSQL.do_expand(Queries, :server)
-
-      assert is_function(function)
-      assert {:ok, {2, ["$1"], ["hostname"]}} = function.({1, [], []}, params)
-    end
-  end
-
-  describe "evaluate/3" do
-    test "evaluates the functions" do
-      stmt =
-        "WITH computed_dates AS (SELECT (datetime::date) AS date, " <>
-        "(datetime::time) AS time FROM generate_series( $1::timestamp, " <>
-        "$2::timestamp + $3::interval - $4::interval, $5::interval ) " <>
-        "AS datetime) SELECT dates.date AS data FROM computed_dates AS dates"
-      args = ["start", "start", "interval", "step", "step"]
-
-      params = %{
-        start: "start",
-        step: "step",
-        interval: "interval"
-      }
-      contents = [
-        "WITH computed_dates AS (",
-        :get_interval,
-        ") SELECT dates.date AS data ",
-        "FROM computed_dates AS dates"
-      ]
-      functions = AyeSQL.expand(Queries, contents)
-
-      base = {1, [], []}
-
-      assert {:ok, {^stmt, ^args}} = AyeSQL.evaluate(functions, base, params)
-    end
-  end
-
-  describe "defqueries/1" do
-    test "defines all the functions" do
-      functions = Queries.module_info(:functions)
-
-      assert Enum.member?(functions, {:get_servers, 1})
-      assert Enum.member?(functions, {:get_servers!, 2})
-      assert Enum.member?(functions, {:get_servers, 1})
-      assert Enum.member?(functions, {:get_servers!, 2})
-
-      assert Enum.member?(functions, {:get_server, 1})
-      assert Enum.member?(functions, {:get_server!, 2})
-      assert Enum.member?(functions, {:get_server, 1})
-      assert Enum.member?(functions, {:get_server!, 2})
-
-      assert Enum.member?(functions, {:get_interval, 1})
-      assert Enum.member?(functions, {:get_interval!, 2})
-      assert Enum.member?(functions, {:get_interval, 1})
-      assert Enum.member?(functions, {:get_interval!, 2})
-
-      assert Enum.member?(functions, {:get_avg_ram, 1})
-      assert Enum.member?(functions, {:get_avg_ram!, 2})
-      assert Enum.member?(functions, {:get_avg_ram, 1})
-      assert Enum.member?(functions, {:get_avg_ram!, 2})
-    end
-
-    test "substitutes all params" do
-      stmt =
-        "WITH computed_dates AS ( SELECT (datetime::date) AS date, "
-        <> "(datetime::time) AS time FROM generate_series( $1::timestamp, "
-        <> "$2::timestamp + $3::interval - $4::interval, $5::interval ) AS "
-        <> "datetime ) SELECT dates.date AS date, dates.time AS time, "
-        <> "metrics.hostname AS hostname, AVG((metrics.metrics->>'ram')"
-        <> "::numeric) AS ram FROM computed_dates AS dates LEFT JOIN "
-        <> "server_metrics AS metrics USING(date, time) WHERE "
-        <> "metrics.hostname IN (SELECT hostname FROM server) AND "
-        <> "metrics.location = $6 GROUP BY dates.date, dates.time, "
-        <> "metrics.hostname"
-      args = ["start", "start", "interval", "step", "step", "location"]
-
-      params = %{
-        start: "start",
-        interval: "interval",
-        step: "step",
-        servers: &Queries.get_servers/2,
-        location: "location"
-      }
-      assert {:ok, {^stmt, ^args}} = Queries.get_avg_ram(params)
-    end
-
-    test "throws exception if .sql file not found" do
+  describe "when file does not exist" do
+    test "throws exception" do
       assert_raise File.Error, fn ->
-        defmodule Queries do
-          use AyeSQL
+        defmodule Unexistent do
+          use AyeSQL, repo: MyRepo
 
-          defqueries("no-existing-file.sql")
+          defqueries("unexistent-file.sql")
         end
       end
+    end
+  end
+
+  describe "when the parser errors" do
+    test "throws exception" do
+      assert_raise CompileError, fn ->
+        defmodule Wrong do
+          use AyeSQL, repo: MyRepo
+
+          defqueries("test/support/wrong.sql")
+        end
+      end
+    end
+  end
+
+  describe "when file is parseable" do
+    defmodule Basic do
+      use AyeSQL, repo: MyRepo
+
+      defqueries("test/support/basic.sql")
+
+      def __external_resource__, do: @external_resource
+    end
+
+    test "generates normal functions" do
+      functions = Basic.module_info(:functions)
+
+      assert Enum.member?(functions, {:get_hostnames, 1})
+      assert Enum.member?(functions, {:get_hostnames, 1})
+
+      assert Enum.member?(functions, {:get_server_by_hostname, 1})
+      assert Enum.member?(functions, {:get_server_by_hostname, 1})
+    end
+
+    test "generates bang functions" do
+      functions = Basic.module_info(:functions)
+
+      assert Enum.member?(functions, {:get_hostnames!, 2})
+      assert Enum.member?(functions, {:get_hostnames!, 2})
+
+      assert Enum.member?(functions, {:get_server_by_hostname!, 2})
+      assert Enum.member?(functions, {:get_server_by_hostname!, 2})
+    end
+
+    test "sets external_resource attribute for recompilation on change" do
+      assert ["test/support/basic.sql"] = Basic.__external_resource__()
+    end
+  end
+
+  describe "when functions are generated" do
+    defmodule Complex do
+      use AyeSQL, repo: MyRepo
+
+      defqueries("test/support/complex.sql")
+    end
+
+    test "can expand query without params" do
+      expected = "SELECT hostname FROM server"
+
+      assert {:ok, {^expected , []}} = Complex.get_hostnames([])
+    end
+
+    test "can expand a regular param" do
+      params = [hostname: "localhost"]
+
+      expected = "SELECT * FROM server WHERE hostname = $1"
+
+      assert {:ok, {^expected, ["localhost"]}} =
+               Complex.get_server_by_hostname(params)
+    end
+
+    test "errors on missing parameters" do
+      assert {:error, "Cannot find hostname in parameters"} =
+                Complex.get_server_by_hostname([])
+    end
+
+    test "ignores undefined params" do
+      params = [hostname: "localhost", foo: 42]
+
+      expected = "SELECT * FROM server WHERE hostname = $1"
+
+      assert {:ok, {^expected, ["localhost"]}} =
+                Complex.get_server_by_hostname(params)
+    end
+
+    test "accepts keyword list as parameters" do
+      params = [hostname: "localhost"]
+
+      expected = "SELECT * FROM server WHERE hostname = $1"
+
+      assert {:ok, {^expected, ["localhost"]}} =
+               Complex.get_server_by_hostname(params)
+    end
+
+    test "accepts map as parameters" do
+      params = %{hostname: "localhost"}
+
+      expected = "SELECT * FROM server WHERE hostname = $1"
+
+      assert {:ok, {^expected, ["localhost"]}} =
+               Complex.get_server_by_hostname(params)
+    end
+
+    test "can expand an IN query" do
+      params = [hostnames: {:in, ["server0", "server1"]}]
+
+      expected = "SELECT * FROM server WHERE hostname IN ( $1,$2 )"
+
+      assert {:ok, {^expected, ["server0", "server1"]}} =
+               Complex.get_servers_by_hostnames(params)
+    end
+
+    test "can expand with a function" do
+      params = [hostnames: &Complex.get_hostnames/2]
+
+      expected =
+        "SELECT * FROM server WHERE hostname IN " <>
+        "( SELECT hostname FROM server )"
+
+      assert {:ok, {^expected, []}} =
+               Complex.get_servers_by_hostnames(params)
+    end
+
+    test "can expand with a function key" do
+      params = [hostnames: {:in, ["server0", "server1"]}]
+
+      expected =
+        "SELECT s.hostname, m.ram FROM metrics AS m JOIN server AS s " <>
+        "ON s.id = m.server_id WHERE s.hostname IN " <>
+        "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
+
+      assert {:ok, {^expected, ["server0", "server1"]}} =
+               Complex.get_ram_by_hostnames(params)
+    end
+  end
+
+  describe "when app is ecto" do
+    defmodule Elixir.Ecto.Adapters.SQL do
+      def query(__MODULE__, MyRepo, _, _) do
+        {:ok, :ecto}
+      end
+    end
+
+    defmodule WithEcto do
+      use AyeSQL, app: :ecto, repo: MyRepo
+
+      defqueries("test/support/basic.sql")
+    end
+
+    test "accepts :ecto" do
+      assert Ecto.Adapters.SQL = WithEcto.__db_module__()
+    end
+
+    test "sets repo" do
+      assert MyRepo = WithEcto.__db_conn_name__()
+    end
+
+    test "fails when there is no repo" do
+      assert_raise ArgumentError, fn ->
+        defmodule NoRepo do
+          use AyeSQL, app: :ecto
+
+          defqueries("test/support/basic.sql")
+        end
+      end
+    end
+
+    test "runs query with the correct module" do
+      assert {:ok, :ecto} = WithEcto.get_hostnames([], run?: true)
+    end
+  end
+
+  describe "when app is postgrex" do
+    defmodule Elixir.Postgrex do
+      def query(__MODULE__, MyConn, _, _) do
+        {:ok, :postgrex}
+      end
+    end
+
+    defmodule WithPostgrex do
+      use AyeSQL, app: :postgrex, conn: MyConn
+
+      defqueries("test/support/basic.sql")
+    end
+
+    test "accepts :postgrex" do
+      assert Postgrex = WithPostgrex.__db_module__()
+    end
+
+    test "sets conn" do
+      assert MyConn = WithPostgrex.__db_conn_name__()
+    end
+
+    test "fails when there is no conn" do
+      assert_raise ArgumentError, fn ->
+        defmodule NoConn do
+          use AyeSQL, app: :postgrex
+
+          defqueries("test/support/basic.sql")
+        end
+      end
+    end
+
+    test "runs query with the correct module" do
+      assert {:ok, :postgrex} = WithPostgrex.get_hostnames([], run?: true)
     end
   end
 end

@@ -80,19 +80,13 @@ defmodule AyeSQL do
   - `conn` - Connection with the database. Used by `:postgrex` app.
   """
   defmacro __using__(options) do
-    app =
-      with app when app in [:ecto, :postgrex] <- options[:app] do
-        app
-      else
-        _ -> :ecto
-      end
+    {module, conn_name} = get_options(options)
 
     quote do
       import AyeSQL, only: [defqueries: 1]
 
-      @ayesql_db_app unquote(app)
-      @ayesql_db_conn unquote(options[:conn])
-      @ayesql_db_repo unquote(options[:repo])
+      @ayesql_db_module unquote(module)
+      @ayesql_db_conn_name unquote(conn_name)
 
       @doc """
       Runs the `query`. On error, fails.
@@ -117,37 +111,30 @@ defmodule AyeSQL do
       def run(query)
 
       def run({stmt, args}) when is_binary(stmt) and is_list(args) do
-        AyeSQL.run(
-          @ayesql_db_app,
-          @ayesql_db_repo,
-          @ayesql_db_conn,
-          stmt,
-          args
-        )
+        AyeSQL.run(@ayesql_db_module, @ayesql_db_conn_name, stmt, args)
       end
+
+      ########################
+      # Helpers for inspection
+
+      @doc false
+      @spec __db_module__() :: module()
+      def __db_module__, do: @ayesql_db_module
+
+      @doc false
+      @spec __db_conn_name__() :: term()
+      def __db_conn_name__, do: @ayesql_db_conn_name
     end
   end
 
   # Runs a `stmt` with some `args` in an `app`.
   @doc false
-  @spec run(Core.app(), term(), term(), Core.statement(), Core.arguments()) ::
+  @spec run(module(), term(), Core.statement(), Core.arguments()) ::
           {:ok, term()} | {:error, term()}
-  def run(app, repo, conn, stmt, args)
+  def run(module, conn_name, stmt, args)
 
-  def run(:ecto, nil, _, _, _) do
-    {:error, "Missing `:repo` attribute in module definition"}
-  end
-
-  def run(:postgrex, _, nil, _, _) do
-    {:error, "Missing `:conn` attribute in module definition"}
-  end
-
-  def run(:ecto, repo, _, stmt, args) do
-    apply(Ecto.Adapters.SQL, :query, [repo, stmt, args])
-  end
-
-  def run(:postgrex, _, conn, stmt, args) do
-    apply(Postgrex, :query, [conn, stmt, args])
+  def run(module, conn_name, stmt, args) do
+    apply(module, :query, [conn_name, stmt, args])
   end
 
   @doc """
@@ -196,26 +183,46 @@ defmodule AyeSQL do
   ```
   """
   defmacro defqueries(file) do
-    contents = File.read!(file)
+    [
+      (quote do: @external_resource unquote(file)),
+      Core.create_queries(file)
+    ]
+  end
 
-    with {:ok, tokens, _} <- :queries_lexer.tokenize(contents),
-         {:ok, ast}       <- :queries_parser.parse(tokens) do
-      [
-        (quote do: @external_resource unquote(file)),
-        Core.create_queries(ast)
-      ]
-    else
-      {:error, {line, module, error}} ->
-        raise CompileError,
-          file: "#{module}",
-          line: line,
-          description: "#{inspect error}"
+  #########
+  # Helpers
 
-      {line, module, error} ->
-        raise CompileError,
-          file: "#{module}",
-          line: line,
-          description: "#{inspect error}"
-    end
+  # Returns valid options or fails
+  @spec get_options(keyword()) :: {module(), term()} | no_return()
+  defp get_options(options) do
+    app = options[:app]
+    repo = options[:repo]
+    conn = options[:conn]
+
+    get_options(app, repo, conn)
+  end
+
+  # Returns valid options or fails
+  @spec get_options(app(), term(), term()) :: {module(), term()} | no_return()
+  defp get_options(app, repo, conn)
+
+  defp get_options(:ecto, nil, _conn) do
+    raise ArgumentError, "Repo cannot be nil for ecto"
+  end
+
+  defp get_options(:postgrex, _repo, nil) do
+    raise ArgumentError, "Connection cannot be nil for Postgrex"
+  end
+
+  defp get_options(:ecto, repo, _conn) do
+    {Ecto.Adapters.SQL, repo}
+  end
+
+  defp get_options(:postgrex, _repo, conn) do
+    {Postgrex, conn}
+  end
+
+  defp get_options(nil, repo, _conn) do
+    get_options(:ecto, repo, nil)
   end
 end

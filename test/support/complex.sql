@@ -1,15 +1,28 @@
 -- No substitution query
--- name: get_servers
+-- name: get_hostnames
 SELECT hostname
   FROM server;
 
 -- Simple query
--- name: get_server
+-- name: get_server_by_hostname
 SELECT *
   FROM server
  WHERE hostname = :hostname;
 
--- Tempotal time table
+-- IN query
+-- name: get_servers_by_hostnames
+SELECT *
+  FROM server
+ WHERE hostname IN ( :hostnames );
+
+-- Query composition (ignore efficiency).
+-- name: get_ram_by_hostnames
+SELECT s.hostname, m.ram
+  FROM metrics AS m
+  JOIN server AS s ON s.id = m.server_id
+ WHERE s.hostname IN ( :get_servers_by_hostnames );
+
+-- Temporal time table
 -- name: get_interval
 -- docs: Gets time intervals
 SELECT (datetime::date) AS date,

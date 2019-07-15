@@ -69,22 +69,38 @@ defmodule AyeSQL.Core do
   # Public API
 
   @doc """
-  Creates several queries from an `ast`.
+  Creates several queries from the contents of a `file`.
   """
-  @spec create_queries(ast()) :: list()
-  def create_queries(ast) do
-    for function <- Enum.map(ast, &create_query/1) do
-      quote do: unquote(function)
+  @spec create_queries(binary()) :: list() | no_return()
+  def create_queries(file) do
+    contents = File.read!(file)
+
+    with {:ok, tokens, _} <- :queries_lexer.tokenize(contents),
+         {:ok, ast}       <- :queries_parser.parse(tokens) do
+      for function <- Enum.map(ast, &create_query/1) do
+        quote do: unquote(function)
+      end
+    else
+      {:error, {line, module, error}} ->
+        raise CompileError,
+          file: "#{module}",
+          line: line,
+          description: "#{inspect error}"
+
+      {line, module, error} ->
+        raise CompileError,
+          file: "#{module}",
+          line: line,
+          description: "#{inspect error}"
     end
   end
 
-  #########
-  # Helpers
+  ########################
+  # Query creation helpers
 
-  @doc false
   # Creates quoted query functions (with and without bang).
   @spec create_query(fun_def()) :: term()
-  def create_query({name, docs, content}) do
+  defp create_query({name, docs, content}) do
     content =
       content
       |> join_fragments()
@@ -98,16 +114,15 @@ defmodule AyeSQL.Core do
   end
 
   # Joins string fragments.
-  @doc false
   @spec join_fragments(content()) :: content()
   @spec join_fragments(content(), content()) :: content()
-  def join_fragments(content, acc \\ [])
+  defp join_fragments(content, acc \\ [])
 
-  def join_fragments([], acc) do
+  defp join_fragments([], acc) do
     Enum.reverse(acc)
   end
 
-  def join_fragments(values, acc) do
+  defp join_fragments(values, acc) do
     case Enum.split_while(values, &is_binary/1) do
       {new_values, [diff | rest]} ->
         new_acc = [diff, Enum.join(new_values, " ") | acc]
@@ -121,9 +136,8 @@ defmodule AyeSQL.Core do
   end
 
   # Creates query function without bang.
-  @doc false
   @spec create_query(name(), docs(), content()) :: term()
-  def create_query(name, docs, content) do
+  defp create_query(name, docs, content) do
     quote do
       @doc AyeSQL.Core.gen_docs(unquote(docs), unquote(content))
       @spec unquote(name)(AyeSQL.Core.parameters()) ::
@@ -147,9 +161,8 @@ defmodule AyeSQL.Core do
   end
 
   # Creates query function with bang.
-  @doc false
   @spec create_query!(name(), docs()) :: term()
-  def create_query!(name, docs) do
+  defp create_query!(name, docs) do
     name! = String.to_atom("#{name}!")
 
     quote do
@@ -218,19 +231,18 @@ defmodule AyeSQL.Core do
   end
 
   # Expands a token to a function
-  @doc false
   @spec do_expand(module(), binary() | atom()) :: expand_function()
-  def do_expand(module, value)
+  defp do_expand(module, value)
 
-  def do_expand(_, value) when is_binary(value) do
+  defp do_expand(_, value) when is_binary(value) do
     expand_binary_fn(value)
   end
 
-  def do_expand(module, key) when is_atom(key) do
+  defp do_expand(module, key) when is_atom(key) do
     functions =
       :functions
-       |> module.module_info()
-       |> Enum.filter(fn {param, value} -> param == key and value == 2 end)
+      |> module.module_info()
+      |> Enum.filter(fn {param, value} -> param == key and value == 2 end)
     if functions == [] do
       expand_param_fn(key)
     else
@@ -239,18 +251,16 @@ defmodule AyeSQL.Core do
   end
 
   # Function to process binaries.
-  @doc false
   @spec expand_binary_fn(binary()) :: expand_function()
-  def expand_binary_fn(value) do
+  defp expand_binary_fn(value) do
     fn {index, stmt, args}, _ ->
       {:ok, {index, [value | stmt], args}}
     end
   end
 
   # Function to process parameters.
-  @doc false
   @spec expand_param_fn(atom()) :: expand_function()
-  def expand_param_fn(key) do
+  defp expand_param_fn(key) do
     fn acc, params ->
       case fetch(params, key) do
         nil ->
@@ -263,28 +273,26 @@ defmodule AyeSQL.Core do
   end
 
   # Fetches values from a map or a Keyword list.
-  @doc false
   @spec fetch(parameters(), atom()) :: term()
-  def fetch(values, atom)
+  defp fetch(values, atom)
 
-  def fetch(values, atom) when is_map(values) do
+  defp fetch(values, atom) when is_map(values) do
     Map.get(values, atom)
   end
 
-  def fetch(values, atom) when is_list(values) do
+  defp fetch(values, atom) when is_list(values) do
     Keyword.get(values, atom)
   end
 
   # Expands values
-  @doc false
   @spec expand_value(
           {:in, term()} | query_function() | term(),
           index(),
           parameters()
         ) :: {:ok, index()} | {:error, term()}
-  def expand_value(value, index, params)
+  defp expand_value(value, index, params)
 
-  def expand_value({:in, vals}, {index, stmt, args}, _) when is_list(vals) do
+  defp expand_value({:in, vals}, {index, stmt, args}, _) when is_list(vals) do
     {next_index, variables} = expand_list(index, vals)
     new_stmt = [variables | stmt]
     new_args = Enum.reverse(vals) ++ args
@@ -292,7 +300,7 @@ defmodule AyeSQL.Core do
     {:ok, {next_index, new_stmt, new_args}}
   end
 
-  def expand_value(fun, {index, stmt, args}, params) when is_function(fun) do
+  defp expand_value(fun, {index, stmt, args}, params) when is_function(fun) do
     with {:ok, {new_stmt, new_args}} <- fun.(params, [index: index]) do
       new_index = index + length(new_args)
       new_stmt = [new_stmt | stmt]
@@ -301,15 +309,14 @@ defmodule AyeSQL.Core do
     end
   end
 
-  def expand_value(value, {index, stmt, args}, _) do
+  defp expand_value(value, {index, stmt, args}, _) do
     variable = "$#{inspect index}"
     {:ok, {index + 1, [variable | stmt], [value | args]}}
   end
 
   # Expands a list to a list of variables.
-  @doc false
   @spec expand_list(non_neg_integer(), list()) :: {non_neg_integer(), binary()}
-  def expand_list(index, list) do
+  defp expand_list(index, list) do
     {next_index, variables} =
       Enum.reduce(list, {index, []}, fn _, {index, acc} ->
         {index + 1, ["$#{inspect index}" | acc]}
@@ -324,9 +331,8 @@ defmodule AyeSQL.Core do
   end
 
   # Function to process function calls.
-  @doc false
   @spec expand_function_fn(module(), atom()) :: expand_function()
-  def expand_function_fn(module, key) do
+  defp expand_function_fn(module, key) do
     fn {index, stmt, args}, params ->
       fun_args = [params, [index: index]]
       with {:ok, {new_stmt, new_args}} <- apply(module, key, fun_args) do
@@ -341,8 +347,8 @@ defmodule AyeSQL.Core do
   ##########################
   # Query evaluation helpers
 
-  @doc false
   # Evaluates the functions.
+  @doc false
   @spec evaluate([expand_function()], index(), parameters()) ::
           {:ok, query()} | {:error, term()}
   def evaluate(functions, index, params)
