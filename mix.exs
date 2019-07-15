@@ -54,11 +54,13 @@ defmodule Ayesql.MixProject do
         "lib",
         "mix.exs",
         "LICENSE",
-        "README.md"
+        "README.md",
+        "CHANGELOG.md"
       ],
       maintainers: ["Alexander de Sousa"],
       licenses: ["MIT"],
       links: %{
+        "Changelog" => "#{@root}/blob/master/CHANGELOG.md",
         "Github" => @root
       }
     ]
