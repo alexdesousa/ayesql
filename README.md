@@ -255,7 +255,7 @@ dependencies in your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ayesql, "~> 0.1"}]
+  [{:ayesql, "~> 0.2"}]
 end
 ```
 

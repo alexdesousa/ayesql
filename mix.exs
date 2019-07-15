@@ -1,14 +1,15 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.1.0"
+  @version "0.2.0"
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do
     [
+      name: "AyeSQL",
       app: :ayesql,
       version: @version,
-      elixir: "~> 1.6",
+      elixir: "~> 1.8",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
@@ -36,8 +37,8 @@ defmodule Ayesql.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.18.4", only: :dev},
-      {:credo, "~> 0.10", only: :dev}
+      {:ex_doc, "~> 0.20", only: :dev},
+      {:credo, "~> 1.1", only: :dev}
     ]
   end
 
@@ -51,7 +52,6 @@ defmodule Ayesql.MixProject do
         "src/queries_lexer.xrl",
         "src/queries_parser.yrl",
         "lib",
-        "test/support",
         "mix.exs",
         "LICENSE",
         "README.md"
@@ -69,10 +69,13 @@ defmodule Ayesql.MixProject do
 
   defp docs do
     [
+      main: "readme",
       source_url: @root,
       source_ref: "v#{@version}",
-      main: AyeSQL,
       formatters: ["html"],
+      extras: [
+        "README.md"
+      ],
       groups_for_modules: groups_for_modules()
     ]
   end
@@ -81,6 +84,7 @@ defmodule Ayesql.MixProject do
     [
       "AyeSQL": [
         AyeSQL,
+        AyeSQL.Core
       ]
     ]
   end

@@ -148,7 +148,7 @@ defmodule AyeSQLTest do
 
   describe "when app is ecto" do
     defmodule Elixir.Ecto.Adapters.SQL do
-      def query(__MODULE__, MyRepo, _, _) do
+      def query(MyRepo, _, _) do
         {:ok, :ecto}
       end
     end
@@ -184,7 +184,7 @@ defmodule AyeSQLTest do
 
   describe "when app is postgrex" do
     defmodule Elixir.Postgrex do
-      def query(__MODULE__, MyConn, _, _) do
+      def query(MyConn, _, _) do
         {:ok, :postgrex}
       end
     end
