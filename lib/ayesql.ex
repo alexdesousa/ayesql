@@ -182,10 +182,13 @@ defmodule AyeSQL do
   %Postgrex.Result{...}
   ```
   """
-  defmacro defqueries(file) do
+  defmacro defqueries(relative) do
+    dirname = Path.dirname(__CALLER__.file)
+    filename = Path.expand("#{dirname}/#{relative}")
+
     [
-      (quote do: @external_resource unquote(file)),
-      Core.create_queries(file)
+      (quote do: @external_resource unquote(filename)),
+      Core.create_queries(filename)
     ]
   end
 

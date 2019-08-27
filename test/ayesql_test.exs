@@ -19,7 +19,7 @@ defmodule AyeSQLTest do
         defmodule Wrong do
           use AyeSQL, repo: MyRepo
 
-          defqueries("test/support/wrong.sql")
+          defqueries("support/wrong.sql")
         end
       end
     end
@@ -29,7 +29,7 @@ defmodule AyeSQLTest do
     defmodule Basic do
       use AyeSQL, repo: MyRepo
 
-      defqueries("test/support/basic.sql")
+      defqueries("support/basic.sql")
 
       def __external_resource__, do: @external_resource
     end
@@ -55,7 +55,8 @@ defmodule AyeSQLTest do
     end
 
     test "sets external_resource attribute for recompilation on change" do
-      assert ["test/support/basic.sql"] = Basic.__external_resource__()
+      [path] = Basic.__external_resource__()
+      assert String.ends_with?(path, "/test/support/basic.sql")
     end
   end
 
@@ -63,7 +64,7 @@ defmodule AyeSQLTest do
     defmodule Complex do
       use AyeSQL, repo: MyRepo
 
-      defqueries("test/support/complex.sql")
+      defqueries("support/complex.sql")
     end
 
     test "can expand query without params" do
@@ -156,7 +157,7 @@ defmodule AyeSQLTest do
     defmodule WithEcto do
       use AyeSQL, app: :ecto, repo: MyRepo
 
-      defqueries("test/support/basic.sql")
+      defqueries("support/basic.sql")
     end
 
     test "accepts :ecto" do
@@ -172,7 +173,7 @@ defmodule AyeSQLTest do
         defmodule NoRepo do
           use AyeSQL, app: :ecto
 
-          defqueries("test/support/basic.sql")
+          defqueries("support/basic.sql")
         end
       end
     end
@@ -192,7 +193,7 @@ defmodule AyeSQLTest do
     defmodule WithPostgrex do
       use AyeSQL, app: :postgrex, conn: MyConn
 
-      defqueries("test/support/basic.sql")
+      defqueries("support/basic.sql")
     end
 
     test "accepts :postgrex" do
@@ -208,7 +209,7 @@ defmodule AyeSQLTest do
         defmodule NoConn do
           use AyeSQL, app: :postgrex
 
-          defqueries("test/support/basic.sql")
+          defqueries("support/basic.sql")
         end
       end
     end
