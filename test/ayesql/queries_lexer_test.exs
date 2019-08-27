@@ -2,17 +2,22 @@ defmodule AyeSQL.QueriesLexerTest do
   use ExUnit.Case, async: true
 
   test "ignores comment" do
-    comment = "-- Some comment\n"
+    comment = "-- Some comment"
     assert {:ok, [], _} = :queries_lexer.tokenize(comment)
   end
 
+  test "detects name at the beginning of the file" do
+    name = "-- name: some_name"
+    assert {:ok, [{:name, _, :some_name}], _} = :queries_lexer.tokenize(name)
+  end
+
   test "detects name" do
-    name = "-- name: some_name\n"
+    name = "\n-- name: some_name"
     assert {:ok, [{:name, _, :some_name}], _} = :queries_lexer.tokenize(name)
   end
 
   test "detects docs" do
-    docs = "-- docs: Some docs\n"
+    docs = "\n-- docs: Some docs"
     assert {:ok, [{:docs, _, "Some docs"}], _} = :queries_lexer.tokenize(docs)
   end
 
@@ -36,7 +41,7 @@ defmodule AyeSQL.QueriesLexerTest do
       {:fragment, _, "="},
       {:fragment, _, " "},
       {:named_param, _, :username},
-      {:end_sql, _}
+      {:fragment, _, ";"}
     ] = tokens
   end
 
@@ -59,8 +64,7 @@ defmodule AyeSQL.QueriesLexerTest do
       {:fragment, _, " "},
       {:fragment, _, "="},
       {:fragment, _, " "},
-      {:fragment, _, "'user'"},
-      {:end_sql, _}
+      {:fragment, _, "'user';"}
     ] = tokens
   end
 
@@ -84,8 +88,7 @@ defmodule AyeSQL.QueriesLexerTest do
       {:fragment, _, "="},
       {:fragment, _, " "},
       {:named_param, _, :username},
-      {:fragment, _, "::text"},
-      {:end_sql, _}
+      {:fragment, _, "::text;"}
     ] = tokens
   end
 end

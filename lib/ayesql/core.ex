@@ -360,6 +360,7 @@ defmodule AyeSQL.Core do
       |> Enum.join()
       |> String.replace(~r/\s+/, " ")
       |> String.trim()
+      |> String.trim(";")
 
     new_acc = Enum.reverse(acc)
 

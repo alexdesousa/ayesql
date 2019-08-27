@@ -1,12 +1,12 @@
 Nonterminals queries query fragments params.
-Terminals end_sql name docs fragment named_param.
+Terminals name docs fragment named_param.
 Rootsymbol queries.
 
 
-queries -> query end_sql         : [ '$1' ].
-queries -> query end_sql queries : [ '$1' | '$3' ].
+queries -> query         : [ '$1' ].
+queries -> query queries : [ '$1' | '$2' ].
 
-query -> name fragments     : {extract_value('$1'), list_to_binary(""), '$2'}.
+query -> name fragments      : {extract_value('$1'), list_to_binary(""), '$2'}.
 query -> name docs fragments : {extract_value('$1'), extract_value('$2'), '$3'}.
 
 fragments -> fragment                         : [ extract_value('$1') ].

@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.3.0
+
+### Enhancements
+
+  * Simplified lexer and parser.
+  * Now it's possible to accept anonymous blocks of code.
+
 ## v0.2.0
 
 ### Enhancements
