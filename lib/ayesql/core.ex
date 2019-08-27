@@ -81,15 +81,15 @@ defmodule AyeSQL.Core do
         quote do: unquote(function)
       end
     else
-      {:error, {line, module, error}} ->
+      {:error, {line, _module, error}, _} ->
         raise CompileError,
-          file: "#{module}",
+          file: "#{file}",
           line: line,
           description: "#{inspect error}"
 
-      {line, module, error} ->
+      {:error, {line, _module, error}} ->
         raise CompileError,
-          file: "#{module}",
+          file: "#{file}",
           line: line,
           description: "#{inspect error}"
     end

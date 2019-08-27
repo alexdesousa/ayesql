@@ -43,7 +43,9 @@ new_comment(TokenLine, "\n-- docs:" ++ TokenChars) ->
   Value = string:trim(TokenChars),
   {token, {docs, TokenLine, list_to_binary(Value)}};
 new_comment(_, "--" ++ _) ->
-  skip_token.
+  skip_token;
+new_comment(TokenLine, "\n" ++ TokenChars) ->
+  new_comment(TokenLine, TokenChars).
 
 new_param(TokenLine, [$: | Name]) ->
   Key = list_to_atom(Name),

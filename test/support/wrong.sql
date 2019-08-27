@@ -1,4 +1,3 @@
--- Missing ; at the end of the statement.
--- name: get_hostnames
+-- docs: no name
 SELECT hostname
   FROM server
