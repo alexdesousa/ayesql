@@ -1,5 +1,6 @@
 defmodule AyeSQLTest do
   use ExUnit.Case, async: true
+  use AyeSQL, repo: MyRepo
 
   describe "when file does not exist" do
     test "throws exception" do
@@ -61,11 +62,8 @@ defmodule AyeSQLTest do
   end
 
   describe "when functions are generated" do
-    defmodule Complex do
-      use AyeSQL, repo: MyRepo
-
-      defqueries("support/complex.sql")
-    end
+    import AyeSQL, only: [defqueries: 3]
+    defqueries(Complex, "support/complex.sql", repo: MyRepo)
 
     test "can expand query without params" do
       expected = "SELECT hostname FROM server"

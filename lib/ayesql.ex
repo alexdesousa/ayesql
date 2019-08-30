@@ -140,9 +140,9 @@ defmodule AyeSQL do
   @doc """
   Macro to load queries from a `file`.
 
-  Let's say we have the file `sql/my_queries.sql` with the following contents:
+  Let's say we have the file `my_queries.sql` with the following contents:
 
-  ```
+  ```sql
   -- name: get_user
   -- docs: Gets user by username
   SELECT *
@@ -154,9 +154,9 @@ defmodule AyeSQL do
 
   ```
   defmodule Queries do
-    use AyeSQL
+    use AyeSQL, repo: MyRepo
 
-    defqueries("sql/my_queries.sql")
+    defqueries("my_queries.sql")
   end
   ```
 
@@ -190,6 +190,33 @@ defmodule AyeSQL do
       (quote do: @external_resource unquote(filename)),
       Core.create_queries(filename)
     ]
+  end
+
+  @doc """
+  Macro to load queries from a `file` and create a module for them.
+
+  Same as `defqueries/1`, but creates a module e.g:
+
+  ```
+  use AyeSQL, repo: MyRepo
+
+  defqueries(Queries, "my_queries.sql")
+  ```
+
+  This will generate the module `Queries` and it'll contain all the SQL
+  statements included in `"sql/my_queries.sql"`.
+  """
+  defmacro defqueries(module, relative, options) do
+    quote do
+      defmodule unquote(module) do
+        @moduledoc """
+        This module defines functions for queries in `#{unquote(relative)}`
+        """
+        use AyeSQL, unquote(options)
+
+        defqueries(unquote(relative))
+      end
+    end
   end
 
   #########

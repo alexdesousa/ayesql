@@ -138,15 +138,27 @@ GROUP BY dates.date
 ORDER BY dates.date;
 ```
 
-In Elixir we would load all the queries in this file by doing the following:
+In Elixir we would load all the queries in this file by creating the following
+module:
 
 ```elixir
 defmodule Queries do
-  use AyeSQL
+  use AyeSQL, repo: MyRepo
 
   defqueries("queries.sql") # File name with relative path to SQL file.
 end
 ```
+
+or using the macro `defqueries/3`:
+
+```
+import AyeSQL, only: [defqueries: 3]
+
+defqueries(Queries, "queries.sql", repo: MyRepo)
+```
+
+Both approaches will create a module called `Queries` with all the queries
+defined in `"queries.sql"`.
 
 And then we could execute the query as follows:
 
@@ -161,17 +173,14 @@ iex(2)> Queries.get_avg_clicks(params, run?: true)
 
 ## Syntax
 
-A SQL file can have as many queries as you want as long as:
-
-1. They are separated by `;`
-2. They are named: Before the query, add a comment with the keyword `name:`.
-   This name will be used for the functions' names e.g
-   ```sql
-   -- Generates the functions get_servers/1 and get_servers/2
-   -- name: get_servers
-   SELECT hostname
-     FROM server;
-   ```
+A SQL file can have as many queries as you want as long as they are named.
+Before the query, add a comment with the keyword `name:`. This name will be
+used for the functions' names e.g
+```sql
+-- name: get_servers
+-- docs: Generates the functions get_servers/1 and get_servers/2
+SELECT hostname FROM server;
+```
 
 And optionally they can have:
 

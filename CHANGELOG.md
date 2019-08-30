@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.1
+
+### Enhancements
+
+  * Added `defqueries/3` to avoid boiler plate code.
+
 ## v0.3.0
 
 ### Enhancements
