@@ -68,7 +68,7 @@ defmodule AyeSQLTest do
     test "can expand query without params" do
       expected = "SELECT hostname FROM server"
 
-      assert {:ok, {^expected , []}} = Complex.get_hostnames([])
+      assert {:ok, {^expected , []}} = Complex.get_hostnames([], run?: false)
     end
 
     test "can expand a regular param" do
@@ -77,12 +77,12 @@ defmodule AyeSQLTest do
       expected = "SELECT * FROM server WHERE hostname = $1"
 
       assert {:ok, {^expected, ["localhost"]}} =
-               Complex.get_server_by_hostname(params)
+               Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "errors on missing parameters" do
       assert {:error, "Cannot find hostname in parameters"} =
-                Complex.get_server_by_hostname([])
+                Complex.get_server_by_hostname([], run?: false)
     end
 
     test "ignores undefined params" do
@@ -91,7 +91,7 @@ defmodule AyeSQLTest do
       expected = "SELECT * FROM server WHERE hostname = $1"
 
       assert {:ok, {^expected, ["localhost"]}} =
-                Complex.get_server_by_hostname(params)
+                Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "accepts keyword list as parameters" do
@@ -100,7 +100,7 @@ defmodule AyeSQLTest do
       expected = "SELECT * FROM server WHERE hostname = $1"
 
       assert {:ok, {^expected, ["localhost"]}} =
-               Complex.get_server_by_hostname(params)
+               Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "accepts map as parameters" do
@@ -109,7 +109,7 @@ defmodule AyeSQLTest do
       expected = "SELECT * FROM server WHERE hostname = $1"
 
       assert {:ok, {^expected, ["localhost"]}} =
-               Complex.get_server_by_hostname(params)
+               Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "can expand an IN query" do
@@ -118,7 +118,7 @@ defmodule AyeSQLTest do
       expected = "SELECT * FROM server WHERE hostname IN ( $1,$2 )"
 
       assert {:ok, {^expected, ["server0", "server1"]}} =
-               Complex.get_servers_by_hostnames(params)
+               Complex.get_servers_by_hostnames(params, run?: false)
     end
 
     test "can expand with a function" do
@@ -129,7 +129,7 @@ defmodule AyeSQLTest do
         "( SELECT hostname FROM server )"
 
       assert {:ok, {^expected, []}} =
-               Complex.get_servers_by_hostnames(params)
+               Complex.get_servers_by_hostnames(params, run?: false)
     end
 
     test "can expand with a function key" do
@@ -141,7 +141,7 @@ defmodule AyeSQLTest do
         "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
 
       assert {:ok, {^expected, ["server0", "server1"]}} =
-               Complex.get_ram_by_hostnames(params)
+               Complex.get_ram_by_hostnames(params, run?: false)
     end
   end
 

@@ -69,6 +69,26 @@ defmodule AyeSQL.Core do
   # Public API
 
   @doc """
+  Whether the queries should run by default or not.
+
+  You can set this in the configuration as:
+
+  ```elixir
+  use Mix.Config
+
+  config :ayesql,
+    run?: true
+  ```
+  """
+  @spec run?() :: boolean()
+  def run? do
+    default = false
+    value = Application.get_env(:ayesql, :run?, default)
+
+    if is_boolean(value), do: value, else: default
+  end
+
+  @doc """
   Creates several queries from the contents of a `file`.
   """
   @spec create_queries(binary()) :: list() | no_return()
@@ -148,7 +168,7 @@ defmodule AyeSQL.Core do
 
       def unquote(name)(params, options) do
         index = Keyword.get(options, :index, 1)
-        run? = Keyword.get(options, :run?, false)
+        run? = Keyword.get(options, :run?, AyeSQL.Core.run?())
 
         content = AyeSQL.Core.expand(__MODULE__, unquote(content))
         base = {index, [], []}
@@ -210,7 +230,8 @@ defmodule AyeSQL.Core do
     ```
 
     with the following `options`:
-    - `run?` - Whether it should run the query or not. Defaults to `false`.
+    - `run?` - Whether it should run the query or not. Defaults to
+      `#{AyeSQL.Core.run?()}`.
 
     and generates/runs the query:
 
@@ -301,7 +322,7 @@ defmodule AyeSQL.Core do
   end
 
   defp expand_value(fun, {index, stmt, args}, params) when is_function(fun) do
-    with {:ok, {new_stmt, new_args}} <- fun.(params, [index: index]) do
+    with {:ok, {new_stmt, new_args}} <- fun.(params, [index: index, run?: false]) do
       new_index = index + length(new_args)
       new_stmt = [new_stmt | stmt]
       new_args = Enum.reverse(new_args) ++ args
@@ -334,7 +355,7 @@ defmodule AyeSQL.Core do
   @spec expand_function_fn(module(), atom()) :: expand_function()
   defp expand_function_fn(module, key) do
     fn {index, stmt, args}, params ->
-      fun_args = [params, [index: index]]
+      fun_args = [params, [index: index, run?: false]]
       with {:ok, {new_stmt, new_args}} <- apply(module, key, fun_args) do
         new_index = index + length(new_args)
         new_stmt = [new_stmt | stmt]
