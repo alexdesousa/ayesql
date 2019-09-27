@@ -2,11 +2,20 @@ defmodule AyeSQLTest do
   use ExUnit.Case, async: true
   use AyeSQL, repo: MyRepo
 
+  defmodule TestRunner do
+    use AyeSQL.Runner
+
+    @impl true
+    def run(stmt, args, options) do
+      {:ok, {stmt, args, options}}
+    end
+  end
+
   describe "when file does not exist" do
     test "throws exception" do
       assert_raise File.Error, fn ->
         defmodule Unexistent do
-          use AyeSQL, repo: MyRepo
+          use AyeSQL, runner: TestRunner
 
           defqueries("unexistent-file.sql")
         end
@@ -18,7 +27,7 @@ defmodule AyeSQLTest do
     test "throws exception" do
       assert_raise CompileError, fn ->
         defmodule Wrong do
-          use AyeSQL, repo: MyRepo
+          use AyeSQL, runner: TestRunner
 
           defqueries("support/wrong.sql")
         end
@@ -28,7 +37,7 @@ defmodule AyeSQLTest do
 
   describe "when file is parseable" do
     defmodule Basic do
-      use AyeSQL, repo: MyRepo
+      use AyeSQL, runner: TestRunner
 
       defqueries("support/basic.sql")
 
@@ -63,12 +72,12 @@ defmodule AyeSQLTest do
 
   describe "when functions are generated" do
     import AyeSQL, only: [defqueries: 3]
-    defqueries(Complex, "support/complex.sql", repo: MyRepo)
+    defqueries(Complex, "support/complex.sql", runner: TestRunner)
 
     test "can expand query without params" do
       expected = "SELECT hostname FROM server"
 
-      assert {:ok, {^expected , []}} = Complex.get_hostnames([], run?: false)
+      assert {:ok, {^expected, []}} = Complex.get_hostnames([], run?: false)
     end
 
     test "can expand a regular param" do
@@ -82,7 +91,7 @@ defmodule AyeSQLTest do
 
     test "errors on missing parameters" do
       assert {:error, "Cannot find hostname in parameters"} =
-                Complex.get_server_by_hostname([], run?: false)
+               Complex.get_server_by_hostname([], run?: false)
     end
 
     test "ignores undefined params" do
@@ -91,7 +100,7 @@ defmodule AyeSQLTest do
       expected = "SELECT * FROM server WHERE hostname = $1"
 
       assert {:ok, {^expected, ["localhost"]}} =
-                Complex.get_server_by_hostname(params, run?: false)
+               Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "accepts keyword list as parameters" do
@@ -126,7 +135,7 @@ defmodule AyeSQLTest do
 
       expected =
         "SELECT * FROM server WHERE hostname IN " <>
-        "( SELECT hostname FROM server )"
+          "( SELECT hostname FROM server )"
 
       assert {:ok, {^expected, []}} =
                Complex.get_servers_by_hostnames(params, run?: false)
@@ -137,83 +146,32 @@ defmodule AyeSQLTest do
 
       expected =
         "SELECT s.hostname, m.ram FROM metrics AS m JOIN server AS s " <>
-        "ON s.id = m.server_id WHERE s.hostname IN " <>
-        "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
+          "ON s.id = m.server_id WHERE s.hostname IN " <>
+          "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
 
       assert {:ok, {^expected, ["server0", "server1"]}} =
                Complex.get_ram_by_hostnames(params, run?: false)
     end
   end
 
-  describe "when app is ecto" do
-    defmodule Elixir.Ecto.Adapters.SQL do
-      def query(MyRepo, _, _) do
-        {:ok, :ecto}
-      end
-    end
-
-    defmodule WithEcto do
-      use AyeSQL, app: :ecto, repo: MyRepo
+  describe "when uses a runner with options" do
+    defmodule WithRunner do
+      use AyeSQL, runner: TestRunner, repo: MyRepo
 
       defqueries("support/basic.sql")
     end
 
-    test "accepts :ecto" do
-      assert Ecto.Adapters.SQL = WithEcto.__db_module__()
+    test "gets runner module" do
+      assert TestRunner = WithRunner.__db_runner__()
     end
 
     test "sets repo" do
-      assert MyRepo = WithEcto.__db_conn_name__()
-    end
-
-    test "fails when there is no repo" do
-      assert_raise ArgumentError, fn ->
-        defmodule NoRepo do
-          use AyeSQL, app: :ecto
-
-          defqueries("support/basic.sql")
-        end
-      end
+      assert [repo: MyRepo] = WithRunner.__db_options__()
     end
 
     test "runs query with the correct module" do
-      assert {:ok, :ecto} = WithEcto.get_hostnames([], run?: true)
-    end
-  end
-
-  describe "when app is postgrex" do
-    defmodule Elixir.Postgrex do
-      def query(MyConn, _, _) do
-        {:ok, :postgrex}
-      end
-    end
-
-    defmodule WithPostgrex do
-      use AyeSQL, app: :postgrex, conn: MyConn
-
-      defqueries("support/basic.sql")
-    end
-
-    test "accepts :postgrex" do
-      assert Postgrex = WithPostgrex.__db_module__()
-    end
-
-    test "sets conn" do
-      assert MyConn = WithPostgrex.__db_conn_name__()
-    end
-
-    test "fails when there is no conn" do
-      assert_raise ArgumentError, fn ->
-        defmodule NoConn do
-          use AyeSQL, app: :postgrex
-
-          defqueries("support/basic.sql")
-        end
-      end
-    end
-
-    test "runs query with the correct module" do
-      assert {:ok, :postgrex} = WithPostgrex.get_hostnames([], run?: true)
+      assert {:ok, {_, [], [repo: MyRepo]}} =
+               WithRunner.get_hostnames([], run?: true)
     end
   end
 end

@@ -25,70 +25,73 @@ defmodule AyeSQL.QueriesLexerTest do
     query = "SELECT * FROM user WHERE username = :username;"
 
     assert {:ok, tokens, _} = :queries_lexer.tokenize(query)
+
     assert [
-      {:fragment, _, "SELECT"},
-      {:fragment, _, " "},
-      {:fragment, _, "*"},
-      {:fragment, _, " "},
-      {:fragment, _, "FROM"},
-      {:fragment, _, " "},
-      {:fragment, _, "user"},
-      {:fragment, _, " "},
-      {:fragment, _, "WHERE"},
-      {:fragment, _, " "},
-      {:fragment, _, "username"},
-      {:fragment, _, " "},
-      {:fragment, _, "="},
-      {:fragment, _, " "},
-      {:named_param, _, :username},
-      {:fragment, _, ";"}
-    ] = tokens
+             {:fragment, _, "SELECT"},
+             {:fragment, _, " "},
+             {:fragment, _, "*"},
+             {:fragment, _, " "},
+             {:fragment, _, "FROM"},
+             {:fragment, _, " "},
+             {:fragment, _, "user"},
+             {:fragment, _, " "},
+             {:fragment, _, "WHERE"},
+             {:fragment, _, " "},
+             {:fragment, _, "username"},
+             {:fragment, _, " "},
+             {:fragment, _, "="},
+             {:fragment, _, " "},
+             {:named_param, _, :username},
+             {:fragment, _, ";"}
+           ] = tokens
   end
 
   test "string is part of a fragment" do
     query = "SELECT * FROM user WHERE username = 'user';"
 
     assert {:ok, tokens, _} = :queries_lexer.tokenize(query)
+
     assert [
-      {:fragment, _, "SELECT"},
-      {:fragment, _, " "},
-      {:fragment, _, "*"},
-      {:fragment, _, " "},
-      {:fragment, _, "FROM"},
-      {:fragment, _, " "},
-      {:fragment, _, "user"},
-      {:fragment, _, " "},
-      {:fragment, _, "WHERE"},
-      {:fragment, _, " "},
-      {:fragment, _, "username"},
-      {:fragment, _, " "},
-      {:fragment, _, "="},
-      {:fragment, _, " "},
-      {:fragment, _, "'user';"}
-    ] = tokens
+             {:fragment, _, "SELECT"},
+             {:fragment, _, " "},
+             {:fragment, _, "*"},
+             {:fragment, _, " "},
+             {:fragment, _, "FROM"},
+             {:fragment, _, " "},
+             {:fragment, _, "user"},
+             {:fragment, _, " "},
+             {:fragment, _, "WHERE"},
+             {:fragment, _, " "},
+             {:fragment, _, "username"},
+             {:fragment, _, " "},
+             {:fragment, _, "="},
+             {:fragment, _, " "},
+             {:fragment, _, "'user';"}
+           ] = tokens
   end
 
   test "cast is part of a fragment" do
     query = "SELECT * FROM user WHERE username = :username::text;"
 
     assert {:ok, tokens, _} = :queries_lexer.tokenize(query)
+
     assert [
-      {:fragment, _, "SELECT"},
-      {:fragment, _, " "},
-      {:fragment, _, "*"},
-      {:fragment, _, " "},
-      {:fragment, _, "FROM"},
-      {:fragment, _, " "},
-      {:fragment, _, "user"},
-      {:fragment, _, " "},
-      {:fragment, _, "WHERE"},
-      {:fragment, _, " "},
-      {:fragment, _, "username"},
-      {:fragment, _, " "},
-      {:fragment, _, "="},
-      {:fragment, _, " "},
-      {:named_param, _, :username},
-      {:fragment, _, "::text;"}
-    ] = tokens
+             {:fragment, _, "SELECT"},
+             {:fragment, _, " "},
+             {:fragment, _, "*"},
+             {:fragment, _, " "},
+             {:fragment, _, "FROM"},
+             {:fragment, _, " "},
+             {:fragment, _, "user"},
+             {:fragment, _, " "},
+             {:fragment, _, "WHERE"},
+             {:fragment, _, " "},
+             {:fragment, _, "username"},
+             {:fragment, _, " "},
+             {:fragment, _, "="},
+             {:fragment, _, " "},
+             {:named_param, _, :username},
+             {:fragment, _, "::text;"}
+           ] = tokens
   end
 end

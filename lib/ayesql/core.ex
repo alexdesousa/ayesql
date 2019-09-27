@@ -63,7 +63,7 @@ defmodule AyeSQL.Core do
   @typedoc false
   @type query_function ::
           (parameters(), options() ->
-            {:ok, query()} | {:ok, term()} | {:error, term()})
+             {:ok, query()} | {:ok, term()} | {:error, term()})
 
   ############
   # Public API
@@ -96,7 +96,7 @@ defmodule AyeSQL.Core do
     contents = File.read!(file)
 
     with {:ok, tokens, _} <- :queries_lexer.tokenize(contents),
-         {:ok, ast}       <- :queries_parser.parse(tokens) do
+         {:ok, ast} <- :queries_parser.parse(tokens) do
       for function <- Enum.map(ast, &create_query/1) do
         quote do: unquote(function)
       end
@@ -105,13 +105,13 @@ defmodule AyeSQL.Core do
         raise CompileError,
           file: "#{file}",
           line: line,
-          description: "#{inspect error}"
+          description: "#{inspect(error)}"
 
       {:error, {line, _module, error}} ->
         raise CompileError,
           file: "#{file}",
           line: line,
-          description: "#{inspect error}"
+          description: "#{inspect(error)}"
     end
   end
 
@@ -151,7 +151,6 @@ defmodule AyeSQL.Core do
       {new_values, []} ->
         new_acc = [Enum.join(new_values, " ") | acc]
         join_fragments([], new_acc)
-
     end
   end
 
@@ -169,12 +168,13 @@ defmodule AyeSQL.Core do
       def unquote(name)(params, options) do
         index = Keyword.get(options, :index, 1)
         run? = Keyword.get(options, :run?, AyeSQL.Core.run?())
+        runner_options = Keyword.get(options, :options, [])
 
         content = AyeSQL.Core.expand(__MODULE__, unquote(content))
         base = {index, [], []}
 
         with {:ok, result} <- AyeSQL.Core.evaluate(content, base, params) do
-          if run?, do: run(result), else: {:ok, result}
+          if run?, do: run(result, runner_options), else: {:ok, result}
         end
       end
     end
@@ -226,7 +226,7 @@ defmodule AyeSQL.Core do
     Expected `params` are:
 
     ```elixir
-    #{inspect params}
+    #{inspect(params)}
     ```
 
     with the following `options`:
@@ -264,6 +264,7 @@ defmodule AyeSQL.Core do
       :functions
       |> module.module_info()
       |> Enum.filter(fn {param, value} -> param == key and value == 2 end)
+
     if functions == [] do
       expand_param_fn(key)
     else
@@ -322,7 +323,7 @@ defmodule AyeSQL.Core do
   end
 
   defp expand_value(fun, {index, stmt, args}, params) when is_function(fun) do
-    with {:ok, {new_stmt, new_args}} <- fun.(params, [index: index, run?: false]) do
+    with {:ok, {new_stmt, new_args}} <- fun.(params, index: index, run?: false) do
       new_index = index + length(new_args)
       new_stmt = [new_stmt | stmt]
       new_args = Enum.reverse(new_args) ++ args
@@ -331,7 +332,7 @@ defmodule AyeSQL.Core do
   end
 
   defp expand_value(value, {index, stmt, args}, _) do
-    variable = "$#{inspect index}"
+    variable = "$#{inspect(index)}"
     {:ok, {index + 1, [variable | stmt], [value | args]}}
   end
 
@@ -340,7 +341,7 @@ defmodule AyeSQL.Core do
   defp expand_list(index, list) do
     {next_index, variables} =
       Enum.reduce(list, {index, []}, fn _, {index, acc} ->
-        {index + 1, ["$#{inspect index}" | acc]}
+        {index + 1, ["$#{inspect(index)}" | acc]}
       end)
 
     variables =
@@ -356,6 +357,7 @@ defmodule AyeSQL.Core do
   defp expand_function_fn(module, key) do
     fn {index, stmt, args}, params ->
       fun_args = [params, [index: index, run?: false]]
+
       with {:ok, {new_stmt, new_args}} <- apply(module, key, fun_args) do
         new_index = index + length(new_args)
         new_stmt = [new_stmt | stmt]

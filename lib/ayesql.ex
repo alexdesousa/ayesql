@@ -60,11 +60,6 @@ defmodule AyeSQL do
   alias AyeSQL.Core
 
   @typedoc """
-  AyeSQL query runners.
-  """
-  @type app :: :ecto | :postgrex
-
-  @typedoc """
   AyeSQL query statement.
   """
   @type query :: Core.query()
@@ -74,28 +69,28 @@ defmodule AyeSQL do
 
   The available options are:
 
-  - `app` - The app that will run the query. Defaults to `:ecto`, but it
-  can also be `:postgrex`.
-  - `repo` - Database repo name. Used by `:ecto` app.
-  - `conn` - Connection with the database. Used by `:postgrex` app.
+  - `runner`: module handling the query.
+
+  Any other option will be passed to the runner.
   """
   defmacro __using__(options) do
-    {module, conn_name} = get_options(options)
+    {db_runner, db_options} = Keyword.pop(options, :runner, AyeSQL.Runner.Ecto)
 
     quote do
       import AyeSQL, only: [defqueries: 1]
 
-      @ayesql_db_module unquote(module)
-      @ayesql_db_conn_name unquote(conn_name)
+      @__db_runner__ unquote(db_runner)
+      @__db_options__ unquote(db_options)
 
       @doc """
       Runs the `query`. On error, fails.
       """
       @spec run!(AyeSQL.query()) :: term() | no_return()
-      def run!(query)
+      @spec run!(AyeSQL.query(), keyword()) :: term() | no_return()
+      def run!(query, options \\ [])
 
-      def run!(query) do
-        case run(query) do
+      def run!(query, options) do
+        case run(query, options) do
           {:ok, result} ->
             result
 
@@ -108,33 +103,36 @@ defmodule AyeSQL do
       Runs the `query`.
       """
       @spec run(AyeSQL.query()) :: {:ok, term()} | {:error, term()}
-      def run(query)
+      @spec run(AyeSQL.query(), keyword()) :: {:ok, term()} | {:error, term()}
+      def run(query, options \\ [])
 
-      def run({stmt, args}) when is_binary(stmt) and is_list(args) do
-        AyeSQL.run(@ayesql_db_module, @ayesql_db_conn_name, stmt, args)
+      def run({stmt, args}, options) when is_binary(stmt) and is_list(args) do
+        db_options = Keyword.merge(@__db_options__, options)
+
+        AyeSQL.run(@__db_runner__, stmt, args, db_options)
       end
 
       ########################
       # Helpers for inspection
 
       @doc false
-      @spec __db_module__() :: module()
-      def __db_module__, do: @ayesql_db_module
+      @spec __db_runner__() :: module()
+      def __db_runner__, do: @__db_runner__
 
       @doc false
-      @spec __db_conn_name__() :: term()
-      def __db_conn_name__, do: @ayesql_db_conn_name
+      @spec __db_options__() :: term()
+      def __db_options__, do: @__db_options__
     end
   end
 
   # Runs a `stmt` with some `args` in an `app`.
   @doc false
-  @spec run(module(), term(), Core.statement(), Core.arguments()) ::
+  @spec run(module(), Core.statement(), Core.arguments(), keyword()) ::
           {:ok, term()} | {:error, term()}
-  def run(module, conn_name, stmt, args)
+  def run(module, stmt, args, options)
 
-  def run(module, conn_name, stmt, args) do
-    apply(module, :query, [conn_name, stmt, args])
+  def run(module, stmt, args, options) do
+    module.run(stmt, args, options)
   end
 
   @doc """
@@ -187,7 +185,7 @@ defmodule AyeSQL do
     filename = Path.expand("#{dirname}/#{relative}")
 
     [
-      (quote do: @external_resource unquote(filename)),
+      quote(do: @external_resource(unquote(filename))),
       Core.create_queries(filename)
     ]
   end
@@ -217,42 +215,5 @@ defmodule AyeSQL do
         defqueries(unquote(relative))
       end
     end
-  end
-
-  #########
-  # Helpers
-
-  # Returns valid options or fails
-  @spec get_options(keyword()) :: {module(), term()} | no_return()
-  defp get_options(options) do
-    app = options[:app]
-    repo = options[:repo]
-    conn = options[:conn]
-
-    get_options(app, repo, conn)
-  end
-
-  # Returns valid options or fails
-  @spec get_options(app(), term(), term()) :: {module(), term()} | no_return()
-  defp get_options(app, repo, conn)
-
-  defp get_options(:ecto, nil, _conn) do
-    raise ArgumentError, "Repo cannot be nil for ecto"
-  end
-
-  defp get_options(:postgrex, _repo, nil) do
-    raise ArgumentError, "Connection cannot be nil for Postgrex"
-  end
-
-  defp get_options(:ecto, repo, _conn) do
-    {Ecto.Adapters.SQL, repo}
-  end
-
-  defp get_options(:postgrex, _repo, conn) do
-    {Postgrex, conn}
-  end
-
-  defp get_options(nil, repo, _conn) do
-    get_options(:ecto, repo, nil)
   end
 end

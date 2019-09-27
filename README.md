@@ -168,7 +168,10 @@ iex(1)>   link_id: 42,
 iex(1)>   days: %Postgrex.Interval{secs: 864_000} # 10 days
 iex(1)> }
 iex(2)> Queries.get_avg_clicks(params, run?: true)
-{:ok, %Postgrex.Result{...}}
+{:ok, [
+  %{day: ..., count: ...},
+  ...
+]}
 ```
 
 ## Syntax
@@ -234,7 +237,11 @@ It is possible to do the following:
 iex(1)> hosts = ["server_0", "server_1", "server_2"]
 iex(2)> params = %{hostnames: {:in, hosts}, location: "Barcelona"}
 iex(3)> Server.get_avg_ram(params, run?: true)
-{:ok, %Postgrex.Result{...}}
+{:ok, [
+  %{hostname: "server_0", avg_ram: ...},
+  %{hostname: "server_1", avg_ram: ...},
+  %{hostname: "server_2", avg_ram: ...},
+]}
 ```
 
 ## Query composability at runtime
@@ -254,7 +261,50 @@ It is possible to do the following:
 iex(1)> query = &Server.get_servers/2
 iex(2)> params = %{hostnames: query, location: "Barcelona", region: "Spain"}
 iex(3)> Server.get_avg_ram(params, run?: true)
-{:ok, %Postgrex.Result{...}}
+{:ok, [
+  %{hostname: ...},
+  ...
+]}
+```
+
+## Query runners
+
+The purpose of runners is to be able to implement other database adapters.
+
+By default, `AyeSQL` uses the runner `AyeSQL.Runner.Ecto`. This runner only has
+one option which is `:repo` for the repo module. Additionally, it converts the
+result to a list of maps.
+
+Using other runners is as easy as setting them in the module definition as
+follows:
+
+```elixir
+defmodule MyQueries do
+  use AyeSQL, runner: IdemRunner, repository: MyRepo
+
+  ...
+end
+```
+
+For runners, there is only one callback to be implemented.
+
+- `run/3`: which receives a `AyeSQL.statement()`, `AyeSQL.arguments()` and
+  a `keyword()` list with extra options for the runner (mandatory).
+
+The following would be a runner for `Ecto` that does nothing to the result
+(returns `Postgrex.Result.t()` and `Postgrex.Error.t()` structs):
+
+```elixir
+defmodule IdemRunner do
+  use AyeSQL.Runner
+
+  @impl true
+  def run(stmt, args, options) do
+    repo = options[:repository] || raise ArgumentError, "No repo defined"
+
+    Ecto.Adapters.SQL.query(repo, stmt, args)
+  end
+end
 ```
 
 ## Installation
@@ -264,7 +314,7 @@ dependencies in your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ayesql, "~> 0.3"}]
+  [{:ayesql, "~> 0.4"}]
 end
 ```
 

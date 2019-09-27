@@ -14,13 +14,13 @@ defmodule AyeSQL.QueriesParserTest do
 
   test "all queries have name", %{ast: ast} do
     assert [
-      {:get_hostnames, _, _},
-      {:get_server_by_hostname, _, _},
-      {:get_servers_by_hostnames, _, _},
-      {:get_ram_by_hostnames, _, _},
-      {:get_interval, _, _},
-      {:get_avg_ram, _, _}
-    ] = ast
+             {:get_hostnames, _, _},
+             {:get_server_by_hostname, _, _},
+             {:get_servers_by_hostnames, _, _},
+             {:get_ram_by_hostnames, _, _},
+             {:get_interval, _, _},
+             {:get_avg_ram, _, _}
+           ] = ast
   end
 
   test "docs are optional", %{ast: ast} do
@@ -34,12 +34,12 @@ defmodule AyeSQL.QueriesParserTest do
       |> Enum.map(&Enum.filter(&1, fn x -> is_atom(x) end))
 
     assert [
-      [],
-      [:hostname],
-      [:hostnames],
-      [:get_servers_by_hostnames],
-      [:start, :start, :interval, :step, :step],
-      [:get_interval, :servers, :location]
-    ] = parameters
+             [],
+             [:hostname],
+             [:hostnames],
+             [:get_servers_by_hostnames],
+             [:start, :start, :interval, :step, :step],
+             [:get_interval, :servers, :location]
+           ] = parameters
   end
 end

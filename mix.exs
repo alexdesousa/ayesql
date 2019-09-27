@@ -1,7 +1,7 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.3.2"
+  @version "0.4.0"
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do
@@ -25,6 +25,7 @@ defmodule Ayesql.MixProject do
   defp elixirc_paths(:test) do
     ["lib", "test/support"]
   end
+
   defp elixirc_paths(_) do
     ["lib"]
   end
@@ -37,8 +38,8 @@ defmodule Ayesql.MixProject do
 
   defp deps do
     [
-      {:ex_doc, "~> 0.21", only: :dev, runtime: :false},
-      {:credo, "~> 1.1", only: :dev, runtime: :false}
+      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
+      {:credo, "~> 1.1", only: :dev, runtime: false}
     ]
   end
 
@@ -84,7 +85,7 @@ defmodule Ayesql.MixProject do
 
   defp groups_for_modules do
     [
-      "AyeSQL": [
+      AyeSQL: [
         AyeSQL,
         AyeSQL.Core
       ]
