@@ -151,7 +151,7 @@ end
 
 or using the macro `defqueries/3`:
 
-```
+```elixir
 import AyeSQL, only: [defqueries: 3]
 
 defqueries(Queries, "queries.sql", repo: MyRepo)
