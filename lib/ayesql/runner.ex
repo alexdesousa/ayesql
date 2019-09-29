@@ -18,4 +18,28 @@ defmodule AyeSQL.Runner do
       @behaviour AyeSQL.Runner
     end
   end
+
+  # Handles the result.
+  @doc false
+  @spec handle_result(map()) :: {:ok, [map()]}
+  def handle_result(result)
+
+  def handle_result(%{columns: nil}) do
+    {:ok, []}
+  end
+
+  def handle_result(%{columns: columns, rows: rows}) do
+    columns = Enum.map(columns, &String.to_atom/1)
+
+    result =
+      rows
+      |> Stream.map(&Stream.zip(columns, &1))
+      |> Enum.map(&Map.new/1)
+
+    {:ok, result}
+  end
+
+  def handle_result(result) do
+    {:ok, result}
+  end
 end

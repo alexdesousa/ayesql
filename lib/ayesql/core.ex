@@ -166,15 +166,14 @@ defmodule AyeSQL.Core do
       def unquote(name)(params, options \\ [])
 
       def unquote(name)(params, options) do
-        index = Keyword.get(options, :index, 1)
-        run? = Keyword.get(options, :run?, AyeSQL.Core.run?())
-        runner_options = Keyword.get(options, :options, [])
+        {index, options} = Keyword.pop(options, :index, 1)
+        {run?, options} = Keyword.pop(options, :run?, AyeSQL.Core.run?())
 
         content = AyeSQL.Core.expand(__MODULE__, unquote(content))
         base = {index, [], []}
 
         with {:ok, result} <- AyeSQL.Core.evaluate(content, base, params) do
-          if run?, do: run(result, runner_options), else: {:ok, result}
+          if run?, do: run(result, options), else: {:ok, result}
         end
       end
     end

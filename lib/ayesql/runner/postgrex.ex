@@ -18,22 +18,20 @@ if Code.ensure_loaded?(Postgrex) do
     query options:
 
     ```elixir
-    iex> MyQueries.get_user([id: id], run?: true, options: [conn: connection])
+    iex> MyQueries.get_user([id: id], run?: true, conn: connection)
     {:ok, ...}
     ```
     """
     use AyeSQL.Runner
 
+    alias AyeSQL.Runner
+
     @impl true
     def run(stmt, args, options) do
       conn = get_connection(options)
 
-      case Postgrex.query(options[:conn], stmt, args) do
-        {:ok, %Postgrex.Result{} = result} ->
-          handle_result(result)
-
-        {:error, %Postgrex.Error{} = error} ->
-          handle_error(error)
+      with {:ok, result} <- Postgrex.query(conn, stmt, args) do
+        Runner.handle_result(result)
       end
     end
 
@@ -46,33 +44,6 @@ if Code.ensure_loaded?(Postgrex) do
       with nil <- options[:conn] do
         raise ArgumentError, "Connection `:conn` cannot be nil"
       end
-    end
-
-    # Handles the result.
-    @doc false
-    @spec handle_result(Postgrex.Result.t()) :: {:ok, [map()]}
-    def handle_result(result)
-
-    def handle_result(%Postgrex.Result{columns: nil}) do
-      {:ok, []}
-    end
-
-    def handle_result(%Postgrex.Result{columns: columns, rows: rows}) do
-      columns = Enum.map(columns, &String.to_atom/1)
-
-      result =
-        rows
-        |> Stream.map(&Stream.zip(columns, &1))
-        |> Enum.map(&Map.new/1)
-
-      {:ok, result}
-    end
-
-    # Handles the error.
-    @doc false
-    @spec handle_error(Postgrex.Error.t()) :: {:error, term()}
-    def handle_error(%Postgrex.Error{postgres: reason}) do
-      {:error, reason}
     end
   end
 end

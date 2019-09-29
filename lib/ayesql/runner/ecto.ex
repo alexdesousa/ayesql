@@ -1,4 +1,4 @@
-if Code.ensure_loaded?(Ecto.Adapters.SQL) and Code.ensure_loaded?(Postgrex) do
+if Code.ensure_loaded?(Ecto.Adapters.SQL) do
   defmodule AyeSQL.Runner.Ecto do
     @moduledoc """
     This module defines `Ecto` default adapter.
@@ -7,24 +7,22 @@ if Code.ensure_loaded?(Ecto.Adapters.SQL) and Code.ensure_loaded?(Postgrex) do
 
     ```elixir
     defmodule MyQueries do
-    use AyeSQL, repo: MyRepo
+      use AyeSQL, repo: MyRepo
 
-    defqueries("query/my_queries.sql")
+      defqueries("query/my_queries.sql")
     end
     ```
     """
     use AyeSQL.Runner
 
+    alias AyeSQL.Runner
+
     @impl true
     def run(stmt, args, options) do
       repo = get_repo(options)
 
-      case Ecto.Adapters.SQL.query(repo, stmt, args) do
-        {:ok, %Postgrex.Result{} = result} ->
-          AyeSQL.Runner.Postgrex.handle_result(result)
-
-        {:error, %Postgrex.Error{} = error} ->
-          AyeSQL.Runner.Postgrex.handle_error(error)
+      with {:ok, result} <- Ecto.Adapters.SQL.query(repo, stmt, args) do
+        Runner.handle_result(result)
       end
     end
 
