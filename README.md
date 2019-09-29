@@ -318,6 +318,14 @@ def deps do
 end
 ```
 
+If you're going to use any of the provided query runners, then you should add
+their dependencies as well:
+
+- Add `:ecto_sql` for `AyeSQL.Runner.Ecto` (default runner).
+- Add `:postgrex` for `AyeSQL.Runner.Postgrex`.
+- Add `:ecto_sql` and `:postgrex` for running queries using `Ecto` in a
+  `PostgreSQL` database.
+
 ## Author
 
 Alexander de Sousa.

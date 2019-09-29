@@ -38,6 +38,8 @@ defmodule Ayesql.MixProject do
 
   defp deps do
     [
+      {:ecto_sql, ">= 2.0.0", optional: true},
+      {:postgrex, ">= 0.0.0", optional: true},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
       {:credo, "~> 1.1", only: :dev, runtime: false}
     ]
@@ -88,6 +90,11 @@ defmodule Ayesql.MixProject do
       AyeSQL: [
         AyeSQL,
         AyeSQL.Core
+      ],
+      "AyeSQL runners": [
+        AyeSQL.Runner,
+        AyeSQL.Runner.Ecto,
+        AyeSQL.Runner.Postgrex
       ]
     ]
   end

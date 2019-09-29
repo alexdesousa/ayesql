@@ -1,5 +1,16 @@
 # Changelog
 
+## v0.4.0
+
+### Enhancements
+
+  * Added `AyeSQL.Runner` behaviour for writing custom query runners.
+  * New query runners for Ecto and Postgrex connections.
+
+## v0.3.2
+
+  * Added configuration support for running queries by default.
+
 ## v0.3.1
 
 ### Enhancements
