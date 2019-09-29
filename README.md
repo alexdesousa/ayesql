@@ -1,6 +1,6 @@
 # AyeSQL
 
-[![Build Status](https://travis-ci.org/alexdesousa/ayesql.svg?branch=master)](https://travis-ci.org/alexdesousa/ayesql) [![Hex pm](http://img.shields.io/hexpm/v/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql) [![hex.pm downloads](https://img.shields.io/hexpm/dt/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql)
+[![Build Status](https://travis-ci.org/alexdesousa/ayesql.svg?branch=master)](https://travis-ci.org/alexdesousa/ayesql) [![Hex pm](https://img.shields.io/hexpm/v/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql) [![hex.pm downloads](https://img.shields.io/hexpm/dt/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql)
 
 > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
 
