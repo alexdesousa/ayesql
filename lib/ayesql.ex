@@ -73,7 +73,7 @@ defmodule AyeSQL do
 
   Any other option will be passed to the runner.
   """
-  defmacro __using__(options \\ []) do
+  defmacro __using__(options) do
     {db_runner, db_options} = Keyword.pop(options, :runner, AyeSQL.Runner.Ecto)
 
     quote do
