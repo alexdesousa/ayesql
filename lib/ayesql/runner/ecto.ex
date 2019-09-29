@@ -32,8 +32,12 @@ if Code.ensure_loaded?(Ecto.Adapters.SQL) do
     # Gets repo module.
     @spec get_repo(keyword()) :: module() | no_return()
     defp get_repo(options) do
-      with nil <- options[:repo] do
-        raise ArgumentError, "Repo `:repo` cannot be nil"
+      repo = options[:repo]
+
+      if Code.ensure_loaded?(repo) do
+        repo
+      else
+        raise ArgumentError, "Invalid value for #{inspect(repo: repo)}"
       end
     end
   end

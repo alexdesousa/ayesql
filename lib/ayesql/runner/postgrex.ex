@@ -8,7 +8,7 @@ if Code.ensure_loaded?(Postgrex) do
     ```elixir
     defmodule MyQueries do
       use AyeSQL,
-        module: AyeSQL.Runner.Postgrex
+        runner: AyeSQL.Runner.Postgrex
 
       defqueries("query/my_queries.sql")
     end
