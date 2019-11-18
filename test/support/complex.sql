@@ -49,3 +49,14 @@ SELECT (datetime::date) AS date,
    WHERE metrics.hostname IN (:servers)
          AND metrics.location = :location
 GROUP BY dates.date, dates.time, metrics.hostname;
+
+-- name: by_location
+-- docs: Location condition
+AND location = :location
+
+-- Function call with optional parameters
+-- name: get_servers
+SELECT *
+  FROM server
+ WHERE hostname = :hostname
+       :_by_location;

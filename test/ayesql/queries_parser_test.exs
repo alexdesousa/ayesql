@@ -9,7 +9,7 @@ defmodule AyeSQL.QueriesParserTest do
   end
 
   test "detects all queries", %{ast: ast} do
-    assert length(ast) == 6
+    assert length(ast) == 8
   end
 
   test "all queries have name", %{ast: ast} do
@@ -19,7 +19,9 @@ defmodule AyeSQL.QueriesParserTest do
              {:get_servers_by_hostnames, _, _},
              {:get_ram_by_hostnames, _, _},
              {:get_interval, _, _},
-             {:get_avg_ram, _, _}
+             {:get_avg_ram, _, _},
+             {:by_location, _, _},
+             {:get_servers, _, _}
            ] = ast
   end
 
@@ -39,7 +41,9 @@ defmodule AyeSQL.QueriesParserTest do
              [:hostnames],
              [:get_servers_by_hostnames],
              [:start, :start, :interval, :step, :step],
-             [:get_interval, :servers, :location]
+             [:get_interval, :servers, :location],
+             [:location],
+             [:hostname, :_by_location]
            ] = parameters
   end
 end

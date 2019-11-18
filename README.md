@@ -209,7 +209,41 @@ And optionally they can have:
      FROM servers
     WHERE location_id IN ( :get_locations );
    ```
-3. Documentation: Before the query, add a comment with the keyword `docs:`.
+3. Named optional parameters: Identified by a `:_` followed by the name of the
+   parameter e.g:
+   ```sql
+   -- name: get_servers
+   SELECT *
+     FROM server
+    WHERE hostname = :hostname
+          :_by_location
+
+   -- name: by_location
+   AND location = :location
+   ```
+   then we could compose the queries as follow:
+
+   - For:
+     ```sql
+     SELECT * FROM server WHERE hostname = :hostname
+     ```
+     it would be called like this:
+     ```elixir
+     Queries.get_servers(hostname: "server0")
+     ```
+   - For:
+     ```sql
+     SELECT * FROM server WHERE hostname = :hostname AND location = :location
+     ```
+     it would be called like this:
+     ```elixir
+     Queries.get_servers(
+       hostname: "server0",
+       location: "Barcelona",
+       :_by_location: &Queries.by_location/2
+     )
+     ```
+4. Documentation: Before the query, add a comment with the keyword `docs:`.
    This string will be used as documentation for the function e.g:
    ```sql
    -- name: get_servers

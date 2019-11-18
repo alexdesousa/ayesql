@@ -89,6 +89,28 @@ defmodule AyeSQLTest do
                Complex.get_server_by_hostname(params, run?: false)
     end
 
+    test "can expand optional parameters when not present" do
+      params = [hostname: "localhost"]
+
+      expected = "SELECT * FROM server WHERE hostname = $1 "
+
+      assert {:ok, {^expected, ["localhost"]}} =
+               Complex.get_servers(params, run?: false)
+    end
+
+    test "can expand optional parameters when present" do
+      params = [
+        hostname: "localhost",
+        _by_location: &Complex.by_location/2,
+        location: "Barcelona"
+      ]
+
+      expected = "SELECT * FROM server WHERE hostname = $1 AND location = $2"
+
+      assert {:ok, {^expected, ["localhost", "Barcelona"]}} =
+               Complex.get_servers(params, run?: false)
+    end
+
     test "errors on missing parameters" do
       assert {:error, "Cannot find hostname in parameters"} =
                Complex.get_server_by_hostname([], run?: false)

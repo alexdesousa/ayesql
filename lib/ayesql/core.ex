@@ -298,11 +298,23 @@ defmodule AyeSQL.Core do
   defp fetch(values, atom)
 
   defp fetch(values, atom) when is_map(values) do
-    Map.get(values, atom)
+    default = if optional?(atom), do: :empty, else: nil
+
+    Map.get(values, atom, default)
   end
 
   defp fetch(values, atom) when is_list(values) do
-    Keyword.get(values, atom)
+    values
+    |> Map.new()
+    |> fetch(atom)
+  end
+
+  # Whether the parameter is optional or not.
+  @spec optional?(atom()) :: boolean()
+  defp optional?(name) do
+    name
+    |> Atom.to_string()
+    |> String.starts_with?("_")
   end
 
   # Expands values
@@ -312,6 +324,10 @@ defmodule AyeSQL.Core do
           parameters()
         ) :: {:ok, index()} | {:error, term()}
   defp expand_value(value, index, params)
+
+  defp expand_value(:empty, {index, stmt, args}, _) do
+    {:ok, {index, stmt, args}}
+  end
 
   defp expand_value({:in, vals}, {index, stmt, args}, _) when is_list(vals) do
     {next_index, variables} = expand_list(index, vals)

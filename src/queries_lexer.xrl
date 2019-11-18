@@ -7,7 +7,7 @@ FunName    = {NewLine}*(\-\-)\sname\:\s[^\n\r]*
 FunDocs    = {NewLine}*(\-\-)\sdocs\:\s[^\n\r]*
 Comment    = (\-\-)[^\n\r]*
 
-Atom       = [a-z][0-9a-zA-Z_]*
+Atom       = [a-z_][0-9a-zA-Z_]*
 NamedParam = :{Atom}
 
 Fragment   = ([^\s\t\n\r?:'']*|::)+

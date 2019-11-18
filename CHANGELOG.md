@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.4.1
+
+### Enhancements
+
+  * Added optional arguments for better composition.
+
 ## v0.4.0
 
 ### Enhancements
