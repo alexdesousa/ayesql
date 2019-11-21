@@ -57,12 +57,8 @@ defmodule AyeSQL do
   {:ok, result} = Queries.get_avg_clicks(params, run?: true)
   ```
   """
-  alias AyeSQL.Core
-
-  @typedoc """
-  AyeSQL query statement.
-  """
-  @type query :: Core.query()
+  alias AyeSQL.Query
+  alias AyeSQL.Parser
 
   @doc """
   Uses `AyeSQL` for loading queries.
@@ -85,8 +81,8 @@ defmodule AyeSQL do
       @doc """
       Runs the `query`. On error, fails.
       """
-      @spec run!(AyeSQL.query()) :: term() | no_return()
-      @spec run!(AyeSQL.query(), keyword()) :: term() | no_return()
+      @spec run!(Query.t()) :: term() | no_return()
+      @spec run!(Query.t(), keyword()) :: term() | no_return()
       def run!(query, options \\ [])
 
       def run!(query, options) do
@@ -102,14 +98,14 @@ defmodule AyeSQL do
       @doc """
       Runs the `query`.
       """
-      @spec run(AyeSQL.query()) :: {:ok, term()} | {:error, term()}
-      @spec run(AyeSQL.query(), keyword()) :: {:ok, term()} | {:error, term()}
+      @spec run(Query.t()) :: {:ok, term()} | {:error, term()}
+      @spec run(Query.t(), keyword()) :: {:ok, term()} | {:error, term()}
       def run(query, options \\ [])
 
-      def run({stmt, args}, options) when is_binary(stmt) and is_list(args) do
+      def run(%Query{} = query, options) do
         db_options = Keyword.merge(@__db_options__, options)
 
-        AyeSQL.run(@__db_runner__, stmt, args, db_options)
+        AyeSQL.run(@__db_runner__, query, db_options)
       end
 
       ########################
@@ -127,12 +123,12 @@ defmodule AyeSQL do
 
   # Runs a `stmt` with some `args` in an `app`.
   @doc false
-  @spec run(module(), Core.statement(), Core.arguments(), keyword()) ::
+  @spec run(module(), Query.t(), keyword()) ::
           {:ok, term()} | {:error, term()}
-  def run(module, stmt, args, options)
+  def run(module, query, options)
 
-  def run(module, stmt, args, options) do
-    module.run(stmt, args, options)
+  def run(module, %Query{} = query, options) do
+    module.run(query, options)
   end
 
   @doc """
@@ -186,7 +182,7 @@ defmodule AyeSQL do
 
     [
       quote(do: @external_resource(unquote(filename))),
-      Core.create_queries(filename)
+      Parser.create_queries(filename)
     ]
   end
 

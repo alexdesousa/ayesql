@@ -6,7 +6,7 @@ defmodule AyeSQLTest do
     use AyeSQL.Runner
 
     @impl true
-    def run(stmt, args, options) do
+    def run(%AyeSQL.Query{statement: stmt, arguments: args}, options) do
       {:ok, {stmt, args, options}}
     end
   end

@@ -2,13 +2,12 @@ defmodule AyeSQL.Runner do
   @moduledoc """
   This module defines an `AyeSQL.Runner`.
   """
-  alias AyeSQL.Core
+  alias AyeSQL.Query
 
   @doc """
   Callback to initialize the runner.
   """
-  @callback run(Core.statement(), Core.arguments(), keyword()) ::
-              {:ok, term()} | {:error, term()}
+  @callback run(Query.t(), keyword()) :: {:ok, term()} | {:error, term()}
 
   @doc """
   Uses the `AyeSQL.Runner` behaviour.

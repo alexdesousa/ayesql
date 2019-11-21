@@ -24,10 +24,11 @@ if Code.ensure_loaded?(Postgrex) do
     """
     use AyeSQL.Runner
 
+    alias AyeSQL.Query
     alias AyeSQL.Runner
 
     @impl true
-    def run(stmt, args, options) do
+    def run(%Query{statement: stmt, arguments: args}, options) do
       conn = get_connection(options)
 
       with {:ok, result} <- Postgrex.query(conn, stmt, args) do
