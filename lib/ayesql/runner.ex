@@ -7,7 +7,8 @@ defmodule AyeSQL.Runner do
   @doc """
   Callback to initialize the runner.
   """
-  @callback run(Query.t(), keyword()) :: {:ok, term()} | {:error, term()}
+  @callback run(query :: Query.t(), options :: keyword()) ::
+              {:ok, term()} | {:error, term()}
 
   @doc """
   Uses the `AyeSQL.Runner` behaviour.
