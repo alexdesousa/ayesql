@@ -110,8 +110,9 @@ defmodule AyeSQL.Parser do
         {run?, options} = Keyword.pop(options, :run?, AyeSQL.Core.run?())
 
         content = AyeSQL.AST.expand(__MODULE__, unquote(content))
+        context = AyeSQL.AST.Context.new(index: index)
 
-        with {:ok, result} <- AyeSQL.Core.evaluate(content, params) do
+        with {:ok, result} <- AyeSQL.Core.evaluate(content, params, context) do
           if run?, do: run(result, options), else: {:ok, result}
         end
       end

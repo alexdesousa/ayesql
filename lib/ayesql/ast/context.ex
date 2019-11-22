@@ -4,6 +4,7 @@ defmodule AyeSQL.AST.Context do
   """
   alias __MODULE__, as: Context
   alias AyeSQL.Core
+  alias AyeSQL.Error
   alias AyeSQL.Query
 
   @doc """
@@ -58,6 +59,7 @@ defmodule AyeSQL.AST.Context do
     |> set_optional(:index, options[:index])
     |> set_optional(:statement, options[:statement])
     |> set_optional(:arguments, options[:arguments])
+    |> set_optional(:errors, options[:errors])
   end
 
   @doc """
@@ -142,8 +144,9 @@ defmodule AyeSQL.AST.Context do
   def merge(%Context{} = old, %Context{} = new) do
     new(
       index: new.index,
-      statement: [new.statement | old.statement],
-      args: new.arguments ++ old.arguments
+      statement: List.flatten([new.statement | old.statement]),
+      arguments: new.arguments ++ old.arguments,
+      errors: new.errors ++ old.errors
     )
   end
 
@@ -157,34 +160,47 @@ defmodule AyeSQL.AST.Context do
     new(
       index: context.index + length(query.arguments),
       statement: [query.statement | context.statement],
-      arguments: Enum.reverse(query.arguments) ++ context.arguments
+      arguments: Enum.reverse(query.arguments) ++ context.arguments,
+      errors: context.errors
+    )
+  end
+
+  @doc """
+  Merges a `context` with an `error`
+  """
+  @spec merge_error(t(), Error.t()) :: t()
+  def merge_error(context, error)
+
+  def merge_error(%Context{} = context, %Error{} = error) do
+    new(
+      index: context.index + length(error.arguments),
+      statement: [error.statement | context.statement],
+      arguments: Enum.reverse(error.arguments) ++ context.arguments,
+      errors: context.errors ++ error.errors
     )
   end
 
   @doc """
   Transforms a context to a query.
   """
-  @spec to_query(t()) :: {:ok, Query.t()} | {:error, t()}
+  @spec to_query(t()) :: {:ok, Query.t()} | {:error, Error.t()}
   def to_query(context)
 
   def to_query(%Context{errors: []} = context) do
-    stmt =
-      context.statement
-      |> Enum.reverse()
-      |> Enum.join()
-      |> String.replace(~r/\s+/, " ")
-      |> String.trim()
-      |> String.trim(";")
-
+    stmt = join_statement(context.statement)
     args = Enum.reverse(context.arguments)
-
     query = Query.new(statement: stmt, arguments: args)
 
-    {:error, query}
+    {:ok, query}
   end
 
   def to_query(%Context{} = context) do
-    {:error, context}
+    stmt = join_statement(context.statement)
+    args = Enum.reverse(context.arguments)
+    errors = Enum.reverse(context.errors)
+    error = Error.new(statement: stmt, arguments: args, errors: errors)
+
+    {:error, error}
   end
 
   @doc """
@@ -193,9 +209,11 @@ defmodule AyeSQL.AST.Context do
   @spec not_found(t(), Core.parameter_name()) :: t()
   def not_found(context, key)
 
-  def not_found(%Context{errors: errors} = context, key) do
-    errors = Keyword.put(errors, key, :not_found)
-    %Context{context | errors: errors}
+  def not_found(%Context{statement: statement, errors: errors} = context, key) do
+    %Context{context |
+      statement: ["<missing #{key}>" | statement],
+      errors: Keyword.put(errors, key, :not_found)
+    }
   end
 
   #########
@@ -221,7 +239,22 @@ defmodule AyeSQL.AST.Context do
     %Context{context | arguments: args}
   end
 
+  def set_optional(%Context{} = context, :errors, errors) when is_list(errors) do
+    %Context{context | errors: errors}
+  end
+
   def set_optional(context, _, _) do
     context
+  end
+
+  # Joins a statement into a binary.
+  @spec join_statement(statement()) :: binary()
+  defp join_statement(statement) when is_list(statement) do
+    statement
+    |> Enum.reverse()
+    |> Enum.join()
+    |> String.replace(~r/\s+/, " ")
+    |> String.trim()
+    |> String.trim(";")
   end
 end

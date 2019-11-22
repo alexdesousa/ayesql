@@ -2,6 +2,9 @@ defmodule AyeSQLTest do
   use ExUnit.Case, async: true
   use AyeSQL, repo: MyRepo
 
+  alias AyeSQL.Error
+  alias AyeSQL.Query
+
   defmodule TestRunner do
     use AyeSQL.Runner
 
@@ -75,26 +78,38 @@ defmodule AyeSQLTest do
     defqueries(Complex, "support/complex.sql", runner: TestRunner)
 
     test "can expand query without params" do
-      expected = "SELECT hostname FROM server"
+      expected =
+        Query.new(
+          arguments: [],
+          statement: "SELECT hostname FROM server"
+        )
 
-      assert {:ok, {^expected, []}} = Complex.get_hostnames([], run?: false)
+      assert {:ok, ^expected} = Complex.get_hostnames([], run?: false)
     end
 
     test "can expand a regular param" do
       params = [hostname: "localhost"]
 
-      expected = "SELECT * FROM server WHERE hostname = $1"
+      expected =
+        Query.new(
+          arguments: ["localhost"],
+          statement: "SELECT * FROM server WHERE hostname = $1"
+        )
 
-      assert {:ok, {^expected, ["localhost"]}} =
+      assert {:ok, ^expected} =
                Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "can expand optional parameters when not present" do
       params = [hostname: "localhost"]
 
-      expected = "SELECT * FROM server WHERE hostname = $1 "
+      expected =
+        Query.new(
+          arguments: ["localhost"],
+          statement: "SELECT * FROM server WHERE hostname = $1 "
+        )
 
-      assert {:ok, {^expected, ["localhost"]}} =
+      assert {:ok, ^expected} =
                Complex.get_servers(params, run?: false)
     end
 
@@ -105,50 +120,70 @@ defmodule AyeSQLTest do
         location: "Barcelona"
       ]
 
-      expected = "SELECT * FROM server WHERE hostname = $1 AND location = $2"
+      expected =
+        Query.new(
+          arguments: ["localhost", "Barcelona"],
+          statement: "SELECT * FROM server WHERE hostname = $1 AND location = $2"
+        )
 
-      assert {:ok, {^expected, ["localhost", "Barcelona"]}} =
+      assert {:ok, ^expected} =
                Complex.get_servers(params, run?: false)
     end
 
     test "errors on missing parameters" do
-      assert {:error, "Cannot find hostname in parameters"} =
+      assert {:error, %Error{errors: [hostname: :not_found]}} =
                Complex.get_server_by_hostname([], run?: false)
     end
 
     test "ignores undefined params" do
       params = [hostname: "localhost", foo: 42]
 
-      expected = "SELECT * FROM server WHERE hostname = $1"
+      expected =
+        Query.new(
+          arguments: ["localhost"],
+          statement: "SELECT * FROM server WHERE hostname = $1"
+        )
 
-      assert {:ok, {^expected, ["localhost"]}} =
+      assert {:ok, ^expected} =
                Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "accepts keyword list as parameters" do
       params = [hostname: "localhost"]
 
-      expected = "SELECT * FROM server WHERE hostname = $1"
+      expected =
+        Query.new(
+          arguments: ["localhost"],
+          statement: "SELECT * FROM server WHERE hostname = $1"
+        )
 
-      assert {:ok, {^expected, ["localhost"]}} =
+      assert {:ok, ^expected} =
                Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "accepts map as parameters" do
       params = %{hostname: "localhost"}
 
-      expected = "SELECT * FROM server WHERE hostname = $1"
+      expected =
+        Query.new(
+          arguments: ["localhost"],
+          statement: "SELECT * FROM server WHERE hostname = $1"
+        )
 
-      assert {:ok, {^expected, ["localhost"]}} =
+      assert {:ok, ^expected} =
                Complex.get_server_by_hostname(params, run?: false)
     end
 
     test "can expand an IN query" do
       params = [hostnames: {:in, ["server0", "server1"]}]
 
-      expected = "SELECT * FROM server WHERE hostname IN ( $1,$2 )"
+      expected =
+        Query.new(
+          arguments: ["server0", "server1"],
+          statement: "SELECT * FROM server WHERE hostname IN ( $1,$2 )"
+        )
 
-      assert {:ok, {^expected, ["server0", "server1"]}} =
+      assert {:ok, ^expected} =
                Complex.get_servers_by_hostnames(params, run?: false)
     end
 
@@ -156,10 +191,13 @@ defmodule AyeSQLTest do
       params = [hostnames: &Complex.get_hostnames/2]
 
       expected =
-        "SELECT * FROM server WHERE hostname IN " <>
-          "( SELECT hostname FROM server )"
+        Query.new(
+          arguments: [],
+          statement: "SELECT * FROM server WHERE hostname IN " <>
+                     "( SELECT hostname FROM server )"
+        )
 
-      assert {:ok, {^expected, []}} =
+      assert {:ok, ^expected} =
                Complex.get_servers_by_hostnames(params, run?: false)
     end
 
@@ -167,12 +205,21 @@ defmodule AyeSQLTest do
       params = [hostnames: {:in, ["server0", "server1"]}]
 
       expected =
-        "SELECT s.hostname, m.ram FROM metrics AS m JOIN server AS s " <>
-          "ON s.id = m.server_id WHERE s.hostname IN " <>
-          "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
+        Query.new(
+          arguments: ["server0", "server1"],
+          statement: "SELECT s.hostname, m.ram " <>
+                     "FROM metrics AS m JOIN server AS s " <>
+                     "ON s.id = m.server_id WHERE s.hostname IN " <>
+                     "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
+        )
 
-      assert {:ok, {^expected, ["server0", "server1"]}} =
+      assert {:ok, ^expected} =
                Complex.get_ram_by_hostnames(params, run?: false)
+    end
+
+    test "errors when missing inner function parameters" do
+      assert {:error, %Error{errors: [hostnames: :not_found]}} =
+               Complex.get_ram_by_hostnames([], run?: false)
     end
   end
 

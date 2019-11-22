@@ -4,6 +4,7 @@ defmodule AyeSQL.Core do
   """
   alias AyeSQL.AST
   alias AyeSQL.AST.Context
+  alias AyeSQL.Error
   alias AyeSQL.Query
 
   @typedoc """
@@ -49,11 +50,9 @@ defmodule AyeSQL.Core do
 
   # Evaluates the functions.
   @doc false
-  @spec evaluate([AST.expand_function()], parameters()) ::
-          {:ok, Query.t()} | {:error, Context.t()}
   @spec evaluate([AST.expand_function()], parameters(), Context.t()) ::
-          {:ok, Query.t()} | {:error, Context.t()}
-  def evaluate(functions, params, context \\ %Context{})
+          {:ok, Query.t()} | {:error, Error.t()}
+  def evaluate(functions, params, context)
 
   def evaluate([], _params, %Context{} = context) do
     Context.to_query(context)

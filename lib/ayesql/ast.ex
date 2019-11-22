@@ -4,6 +4,7 @@ defmodule AyeSQL.AST do
   """
   alias AyeSQL.AST.Context
   alias AyeSQL.Core
+  alias AyeSQL.Error
   alias AyeSQL.Query
   alias AyeSQL.Parser
 
@@ -16,7 +17,7 @@ defmodule AyeSQL.AST do
   @typedoc false
   @type query_function ::
           (Core.parameters(), Core.options() ->
-             {:ok, Query.t()} | {:error, Context.t()})
+             {:ok, Query.t()} | {:error, Error.t()})
 
   @typedoc false
   @type value ::
@@ -96,8 +97,12 @@ defmodule AyeSQL.AST do
   end
 
   defp expand_value(fun, %Context{index: index} = context, params) when is_function(fun) do
-    with {:ok, %Query{} = query} <- fun.(params, index: index, run?: false) do
-      Context.merge_query(context, query)
+    case fun.(params, index: index, run?: false) do
+      {:ok, %Query{} = query} ->
+        Context.merge_query(context, query)
+
+      {:error, %Error{} = error} ->
+        Context.merge_error(context, error)
     end
   end
 

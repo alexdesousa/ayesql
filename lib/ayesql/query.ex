@@ -54,8 +54,4 @@ defmodule AyeSQL.Query do
   def set_optional(%Query{} = query, :arguments, args) when is_list(args) do
     %Query{query | arguments: args}
   end
-
-  def set_optional(query, _, _) do
-    query
-  end
 end
