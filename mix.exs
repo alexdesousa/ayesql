@@ -88,8 +88,17 @@ defmodule Ayesql.MixProject do
   defp groups_for_modules do
     [
       AyeSQL: [
-        AyeSQL,
-        AyeSQL.Core
+        AyeSQL
+      ],
+      "AyeSQL Interpreter": [
+        AyeSQL.Core,
+        AyeSQL.Query,
+        AyeSQL.Error
+      ],
+      "AyeSQL Parser": [
+        AyeSQL.Parser,
+        AyeSQL.AST,
+        AyeSQL.AST.Context
       ],
       "AyeSQL runners": [
         AyeSQL.Runner,

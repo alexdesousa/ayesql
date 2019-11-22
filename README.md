@@ -4,7 +4,7 @@
 
 > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
 
-_AyeSQL_ is a small Elixir library for using raw SQL.
+_AyeSQL_ is a library for using raw SQL.
 
 ## Why raw SQL?
 
@@ -25,12 +25,13 @@ arguments = ["server_0", "server_1", "server_2", "Barcelona"]
 Postgrex.query(conn, query, arguments)
 ```
 
-Adding more `hostname`s to the previous query is a nightmare, editing strings
-to add the correct index to the query.
+Adding more hostnames to the previous query would be a nightmare. If
+the `arguments` are generated dynamically, then editing this query would be
+a challenging task.
 
 Thankfully, we have [Ecto](https://github.com/elixir-ecto/ecto), which provides
 a great DSL for generating database queries at runtime. The same query in Ecto
-e.g:
+would be the following:
 
 ```elixir
 servers = ["server_0", "server_1", "server_2"]
@@ -43,11 +44,11 @@ from s in "server",
 
 Pretty straightforward and maintainable.
 
-So, **why raw SQL?**. Though Ecto is quite good with simple queries, complex
-queries often require the use of fragments, ruining the abstraction and making
-the code harder to read e.g:
+If Ecto is so good for building queries, **why would you use raw SQL?**. Though
+Ecto is quite good with simple queries, complex queries often require the use
+of fragments, ruining the abstraction and making the code harder to read e.g:
 
-Let's say we have the following
+Let's say we have an
 [SQL query](https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0)
 to retrieve the click count of a certain type of link every day of the last `X`
 days. In raw SQL this could be written as:
@@ -112,14 +113,15 @@ _AyeSQL_ tries to find a middle ground between those two approaches by:
 
 - Keeping the SQL in SQL files.
 - Generating Elixir functions for every query.
-- Having named parameters and query composability easily.
+- Having mandatory and optional named parameters.
+- Allowing query composability with ease.
 
 Using the previous query, we would create a SQL file with the following
 contents:
 
 ```sql
 -- name: get_day_interval
--- docs: Gets days interval.
+-- This query do not have docs, so it's private.
 SELECT datetime::date AS date
   FROM generate_series(
         current_date - :days::interval, -- Named parameter :days
@@ -129,7 +131,7 @@ SELECT datetime::date AS date
 
 -- name: get_avg_clicks
 -- docs: Gets average click count.
-    WITH computed_dates AS ( :get_day_interval )
+    WITH computed_dates AS ( :get_day_interval ) -- Composing with another query
   SELECT dates.date AS day, count(clicks.id) AS count
     FROM computed_date AS dates
          LEFT JOIN clicks AS clicks ON date(clicks.inserted_at) = dates.date
@@ -163,145 +165,250 @@ defined in `"queries.sql"`.
 And then we could execute the query as follows:
 
 ```elixir
-iex(1)> params = %{
-iex(1)>   link_id: 42,
-iex(1)>   days: %Postgrex.Interval{secs: 864_000} # 10 days
-iex(1)> }
-iex(2)> Queries.get_avg_clicks(params, run?: true)
-{:ok, [
-  %{day: ..., count: ...},
-  ...
-]}
+iex> params = [
+...>   link_id: 42,
+...>   days: %Postgrex.Interval{secs: 864_000} # 10 days
+...> ]
+iex> Queries.get_avg_clicks(params, run?: true)
+{:ok,
+  [
+    %{day: ..., count: ...},
+    ...
+  ]
+}
 ```
 
 ## Syntax
 
-A SQL file can have as many queries as you want as long as they are named.
-Before the query, add a comment with the keyword `name:`. This name will be
-used for the functions' names e.g
+An SQL file can have as many queries as you want as long as they are named.
+
+For the following sections we'll assume we have:
+
+- `lib/my_repo.ex` which is an `Ecto` repo called `MyRepo`.
+- `lib/queries.sql` with SQL queries.
+- `lib/queries.ex` with the following structure:
+
+    ```elixir
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(Queries, "queries.sql", repo: MyRepo)
+    ```
+- Running the queries by default by adding the following in `config/config.exs`:
+
+    ```elixir
+    config ayesql, run?: true
+    ```
+
+### Naming Queries
+
+For naming queries, we add a comment with the keyword `-- name: ` followed by
+the name of the function e.g the following query would generate the function
+`Queries.get_hostnames/2`:
+
 ```sql
--- name: get_servers
--- docs: Generates the functions get_servers/1 and get_servers/2
-SELECT hostname FROM server;
+-- name: get_hostnames
+SELECT hostname FROM server
 ```
 
-And optionally they can have:
-
-1. Named parameters: Identified by a `:` followed by the name of the
-   parameter e.g:
-   ```sql
-   -- These functions receive a map or a Keyword with the parameter :hostname.
-   -- name: get_server
-   SELECT * FROM server WHERE hostname = :hostname;
-   ```
-2. SQL queries calls: Identified by a `:` followed by the name of the query in
-   the same file e.g:
-   ```sql
-   -- name: get_locations
-   SELECT id
-     FROM location
-    WHERE region = :region;
-
-   -- This will compose :get_locations with get_servers_by_location.
-   -- The function will receive a map or a Keyword with the parameter :region.
-   -- name: get_servers_by_location
-   SELECT *
-     FROM servers
-    WHERE location_id IN ( :get_locations );
-   ```
-3. Named optional parameters: Identified by a `:_` followed by the name of the
-   parameter e.g:
-   ```sql
-   -- name: get_servers
-   SELECT *
-     FROM server
-    WHERE hostname = :hostname
-          :_by_location
-
-   -- name: by_location
-   AND location = :location
-   ```
-   then we could compose the queries as follow:
-
-   - For:
-     ```sql
-     SELECT * FROM server WHERE hostname = :hostname
-     ```
-     it would be called like this:
-     ```elixir
-     Queries.get_servers(hostname: "server0")
-     ```
-   - For:
-     ```sql
-     SELECT * FROM server WHERE hostname = :hostname AND location = :location
-     ```
-     it would be called like this:
-     ```elixir
-     Queries.get_servers(
-       hostname: "server0",
-       location: "Barcelona",
-       :_by_location: &Queries.by_location/2
-     )
-     ```
-4. Documentation: Before the query, add a comment with the keyword `docs:`.
-   This string will be used as documentation for the function e.g:
-   ```sql
-   -- name: get_servers
-   -- docs: Gets all the servers hostnames.
-   SELECT hostname
-     FROM server;
-   ```
-
-## `IN` statement
-
-Let's say we have the following query loaded in the module `Server`:
+Additionally, we could also add documentation for the query by adding a comment
+with the keyword `-- docs: ` followed by the query's documentation e.g:
 
 ```sql
--- name: get_avg_ram
-  SELECT hostname, AVG(ram_usage) AS avg_ram
-    FROM server
-   WHERE hostname IN (:hostnames)
-         AND location = :location
-GROUP BY hostname;
+-- name: get_hostnames
+-- docs: Gets hostnames from the servers.
+SELECT hostname FROM server
+```
+
+> Important: if the function does not have `-- docs: ` it won't have
+> documentation e.g. `@doc false`.
+
+### Named Parameters
+
+There are two types of named parameters:
+
+- Mandatory: for passing parameters to a query. They start with `:` e.g.
+  `:hostname`.
+- Optional: for query composability. The start with `:_` e.g. `:_order_by`.
+
+Additionaly, any query in a file can be accessed with its name adding `:` at
+the front e.g `:get_hostnames`.
+
+### Mandatory Parameters
+
+Let's say we want to get the name of an operative system by architecture:
+
+```sql
+-- name: get_os_by_architecture
+-- docs: Gets operative system's name by a given architecture.
+SELECT name
+  FROM operative_system
+ WHERE architecture = :architecture
+```
+
+The previous query would generate the function
+`Queries.get_os_by_architecture/2` that can be called as:
+
+```elixir
+iex> Queries.get_os_by_architecture(architecture: "AMD64")
+{:ok,
+  [
+    %{name: "Debian Buster"},
+    %{name: "Windows 10"},
+    ...
+  ]
+}
+```
+
+### Query Composition
+
+Now if we would like to get hostnames by architecture we could compose queries
+by doing the following:
+
+```sql
+-- name: get_os_by_architecture
+-- docs: Gets operative system's name by a given architecture.
+SELECT name
+  FROM operative_system
+ WHERE architecture = :architecture
+
+-- name: get_hostnames_by_architecture
+-- docs: Gets hostnames by architecture.
+SELECT hostname
+  FROM servers
+ WHERE os_name IN ( :get_os_by_architecture )
+```
+
+The previous query would generate the function
+`Queries.get_hostnames_by_architecture/2` that can be called as:
+
+```elixir
+iex> Queries.get_hostnames_by_architecture(architecture: "AMD64")
+{:ok,
+  [
+    %{hostname: "server0"},
+    %{hostname: "server1"},
+    ...
+  ]
+}
+```
+
+### Optional Parameters
+
+Let's say that now we need to order ascending or descending by hostname by
+using an optional `:_order_by` parameter e.g:
+
+```sql
+-- name: get_os_by_architecture
+-- docs: Gets operative system's name by a given architecture.
+SELECT name
+  FROM operative_system
+ WHERE architecture = :architecture
+
+-- name: get_hostnames_by_architecture
+-- docs: Gets hostnames by architecture.
+SELECT hostname
+  FROM servers
+ WHERE os_name IN ( :get_os_by_architecture )
+ :_order_by
+
+-- name: ascending
+ORDER BY hostname ASC
+
+-- name: descending
+ORDER BY hostname DESC
+```
+
+The previous query could be called as before:
+
+```elixir
+iex> Queries.get_hostnames_by_architecture(architecture: "AMD64")
+{:ok,
+  [
+    %{hostname: "Barcelona"},
+    %{hostname: "Granada"},
+    %{hostname: "Madrid"},
+    ...
+  ]
+}
+```
+
+or by order ascending:
+
+```elixir
+iex> params = [architecture: "AMD64", _order_by: :ascending]
+iex> Queries.get_hostnames_by_architecture(params)
+{:ok,
+  [
+    %{hostname: "Barcelona"},
+    %{hostname: "Madrid"},
+    %{hostname: "Granada"},
+    ...
+  ]
+}
+```
+
+or descending:
+
+```elixir
+iex> params = [architecture: "AMD64", _order_by: :descending]
+iex> Queries.get_hostnames_by_architecture(params)
+{:ok,
+  [
+    %{hostname: "Zaragoza"},
+    %{hostname: "Madrid"},
+    %{hostname: "Granada"},
+    ...
+  ]
+}
+```
+
+> Important: A query can be called by name e.g. `:descending` if it's defined
+> in the same SQL file. Otherwise, we need to pass the function instead e.g.
+> `Queries.descending/2`
+>
+> ```elixir
+> iex> params = [architecture: "AMD64", _order_by: Queries.descending/2]
+> iex> Queries.get_hostnames_by_architecture(params)
+> {:ok,
+>   [
+>     %{hostname: "Zaragoza"},
+>     %{hostname: "Madrid"},
+>     %{hostname: "Granada"},
+>     ...
+>   ]
+> }
+> ```
+
+### `IN` Statement
+
+Lists in SQL might be tricky. That's why AyeSQL supports a special type for
+them e.g:
+
+Let's say we have the following query:
+
+```sql
+-- name: get_os_by_hostname
+-- docs: Gets hostnames and OS names given a list of hostnames.
+SELECT hostname, os_name
+  FROM servers
+ WHERE hostname IN (:hostnames)
 ```
 
 It is possible to do the following:
 
 ```elixir
-iex(1)> hosts = ["server_0", "server_1", "server_2"]
-iex(2)> params = %{hostnames: {:in, hosts}, location: "Barcelona"}
-iex(3)> Server.get_avg_ram(params, run?: true)
-{:ok, [
-  %{hostname: "server_0", avg_ram: ...},
-  %{hostname: "server_1", avg_ram: ...},
-  %{hostname: "server_2", avg_ram: ...},
-]}
+iex> params = [hostnames: {:in, ["server0", "server1", "server2"]}]
+iex> Server.get_os_by_hostname(params)
+{:ok,
+  [
+    %{hostname: "server0", os_name: "Debian Buster"},
+    %{hostname: "server1", avg_ram: "Windows 10"},
+    %{hostname: "server2", avg_ram: "Minix 3"}
+  ]
+}
 ```
 
-## Query composability at runtime
-
-Let's say we have the following query loaded in the module `Server`:
-
-```sql
--- name: get_servers
-  SELECT hostname
-    FROM server
-   WHERE region = :region;
-```
-
-It is possible to do the following:
-
-```elixir
-iex(1)> query = &Server.get_servers/2
-iex(2)> params = %{hostnames: query, location: "Barcelona", region: "Spain"}
-iex(3)> Server.get_avg_ram(params, run?: true)
-{:ok, [
-  %{hostname: ...},
-  ...
-]}
-```
-
-## Query runners
+## Query Runners
 
 The purpose of runners is to be able to implement other database adapters.
 
@@ -313,17 +420,25 @@ Using other runners is as easy as setting them in the module definition as
 follows:
 
 ```elixir
-defmodule MyQueries do
+defmodule Queries do
   use AyeSQL, runner: IdemRunner, repository: MyRepo
 
-  ...
+  defqueries("queries.sql")
 end
+```
+
+or
+
+```elixir
+import AyeSQL, only: [defqueries: 3]
+
+defqueries(Queries, "queries.sql", runner: IdemRunner, repository: MyRepo)
 ```
 
 For runners, there is only one callback to be implemented.
 
-- `run/3`: which receives a `AyeSQL.statement()`, `AyeSQL.arguments()` and
-  a `keyword()` list with extra options for the runner (mandatory).
+- `run/2`: which receives a `AyeSQL.Query.t()` and a `keyword()` list with
+  extra options for the runner.
 
 The following would be a runner for `Ecto` that does nothing to the result
 (returns `Postgrex.Result.t()` and `Postgrex.Error.t()` structs):
@@ -332,14 +447,31 @@ The following would be a runner for `Ecto` that does nothing to the result
 defmodule IdemRunner do
   use AyeSQL.Runner
 
+  alias AyeSQL.Query
+
   @impl true
-  def run(stmt, args, options) do
+  def run(%Query{statement: stmt, arguments: args}, options) do
     repo = options[:repository] || raise ArgumentError, "No repo defined"
 
     Ecto.Adapters.SQL.query(repo, stmt, args)
   end
 end
 ```
+
+## Running Queries by Default
+
+Queries are not run by default, but the `AyeSQL.Query.t()` struct is returned
+instead. For running queries by default, we can add the following to the
+config:
+
+```elixir
+use Mix.Config
+
+config :ayesql,
+  run?: true
+```
+
+And then we don't need to specify the `[run?: true]` options for every query.
 
 ## Installation
 
@@ -348,7 +480,7 @@ dependencies in your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ayesql, "~> 0.4"}]
+  [{:ayesql, "~> 0.5"}]
 end
 ```
 

@@ -11,50 +11,69 @@ defmodule AyeSQL do
 
   - Keeping the SQL in SQL files.
   - Generating Elixir functions for every query.
-  - Having named parameters and query composability easily.
+  - Having mandatory and optional named parameters.
+  - Allowing query composability with ease.
 
   Using the previous query, we would create a SQL file with the following
   contents:
 
   ```sql
   -- name: get_day_interval
-  -- docs: Gets days interval.
-  SELECT generate_series(
-           current_date - :days::interval, -- Named parameter :days
-           current_date - interval '1 day',
-           interval '1 day'
-         )::date AS date;
+  -- This query do not have docs, so it's private.
+  SELECT datetime::date AS date
+    FROM generate_series(
+          current_date - :days::interval, -- Named parameter :days
+          current_date - interval '1 day',
+          interval '1 day'
+        );
 
   -- name: get_avg_clicks
   -- docs: Gets average click count.
-      WITH computed_dates AS ( :get_day_interval )
+      WITH computed_dates AS ( :get_day_interval ) -- Composing with another query
     SELECT dates.date AS day, count(clicks.id) AS count
       FROM computed_date AS dates
-           LEFT JOIN clicks AS clicks ON date(clicks.inserted_at) = dates.date
-     WHERE clicks.link_id = :link_id -- Named parameter :link_id
+          LEFT JOIN clicks AS clicks ON date(clicks.inserted_at) = dates.date
+    WHERE clicks.link_id = :link_id -- Named parameter :link_id
   GROUP BY dates.date
   ORDER BY dates.date;
   ```
 
-  In Elixir we would load all the queries in this file by doing the following:
+  In Elixir we would load all the queries in this file by creating the following
+  module:
 
   ```elixir
   defmodule Queries do
-    use AyeSQL
+    use AyeSQL, repo: MyRepo
 
     defqueries("queries.sql") # File name with relative path to SQL file.
   end
   ```
 
+  or using the macro `defqueries/3`:
+
+  ```elixir
+  import AyeSQL, only: [defqueries: 3]
+
+  defqueries(Queries, "queries.sql", repo: MyRepo)
+  ```
+
+  Both approaches will create a module called `Queries` with all the queries
+  defined in `"queries.sql"`.
+
   And then we could execute the query as follows:
 
   ```elixir
-  params = %{
-    link_id: 42,
-    days: %Postgrex.Interval{secs: 864000} # 10 days
+  iex> params = [
+  ...>   link_id: 42,
+  ...>   days: %Postgrex.Interval{secs: 864_000} # 10 days
+  ...> ]
+  iex> Queries.get_avg_clicks(params, run?: true)
+  {:ok,
+    [
+      %{day: ..., count: ...},
+      ...
+    ]
   }
-
-  {:ok, result} = Queries.get_avg_clicks(params, run?: true)
   ```
   """
   alias AyeSQL.Query
