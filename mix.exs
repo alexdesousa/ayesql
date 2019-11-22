@@ -1,7 +1,7 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.4.1"
+  @version "0.5.0"
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do
@@ -88,8 +88,17 @@ defmodule Ayesql.MixProject do
   defp groups_for_modules do
     [
       AyeSQL: [
-        AyeSQL,
-        AyeSQL.Core
+        AyeSQL
+      ],
+      "AyeSQL Interpreter": [
+        AyeSQL.Core,
+        AyeSQL.Query,
+        AyeSQL.Error
+      ],
+      "AyeSQL Parser": [
+        AyeSQL.Parser,
+        AyeSQL.AST,
+        AyeSQL.AST.Context
       ],
       "AyeSQL runners": [
         AyeSQL.Runner,

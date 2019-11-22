@@ -15,10 +15,11 @@ if Code.ensure_loaded?(Ecto.Adapters.SQL) do
     """
     use AyeSQL.Runner
 
+    alias AyeSQL.Query
     alias AyeSQL.Runner
 
     @impl true
-    def run(stmt, args, options) do
+    def run(%Query{statement: stmt, arguments: args}, options) do
       repo = get_repo(options)
 
       with {:ok, result} <- Ecto.Adapters.SQL.query(repo, stmt, args) do
