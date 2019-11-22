@@ -30,10 +30,10 @@ defmodule AyeSQL.Error do
   An error type.
   """
   @type t :: %__MODULE__{
-    statement: statement :: statement(),
-    arguments: arguments :: arguments(),
-    errors: errors :: errors()
-  }
+          statement: statement :: statement(),
+          arguments: arguments :: arguments(),
+          errors: errors :: errors()
+        }
 
   ############
   # Public API

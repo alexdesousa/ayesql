@@ -96,7 +96,8 @@ defmodule AyeSQL.AST do
     Context.put_variables(context, vals)
   end
 
-  defp expand_value(fun, %Context{index: index} = context, params) when is_function(fun) do
+  defp expand_value(fun, %Context{index: index} = context, params)
+       when is_function(fun) do
     case fun.(params, index: index, run?: false) do
       {:ok, %Query{} = query} ->
         Context.merge_query(context, query)

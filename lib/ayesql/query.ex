@@ -23,9 +23,9 @@ defmodule AyeSQL.Query do
   A query type.
   """
   @type t :: %__MODULE__{
-    statement: statement :: statement(),
-    arguments: arguments :: arguments()
-  }
+          statement: statement :: statement(),
+          arguments: arguments :: arguments()
+        }
 
   ############
   # Public API

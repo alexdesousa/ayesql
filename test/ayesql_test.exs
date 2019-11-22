@@ -109,8 +109,7 @@ defmodule AyeSQLTest do
           statement: "SELECT * FROM server WHERE hostname = $1 "
         )
 
-      assert {:ok, ^expected} =
-               Complex.get_servers(params, run?: false)
+      assert {:ok, ^expected} = Complex.get_servers(params, run?: false)
     end
 
     test "can expand optional parameters when present" do
@@ -123,11 +122,11 @@ defmodule AyeSQLTest do
       expected =
         Query.new(
           arguments: ["localhost", "Barcelona"],
-          statement: "SELECT * FROM server WHERE hostname = $1 AND location = $2"
+          statement:
+            "SELECT * FROM server WHERE hostname = $1 AND location = $2"
         )
 
-      assert {:ok, ^expected} =
-               Complex.get_servers(params, run?: false)
+      assert {:ok, ^expected} = Complex.get_servers(params, run?: false)
     end
 
     test "errors on missing parameters" do
@@ -193,8 +192,9 @@ defmodule AyeSQLTest do
       expected =
         Query.new(
           arguments: [],
-          statement: "SELECT * FROM server WHERE hostname IN " <>
-                     "( SELECT hostname FROM server )"
+          statement:
+            "SELECT * FROM server WHERE hostname IN " <>
+              "( SELECT hostname FROM server )"
         )
 
       assert {:ok, ^expected} =
@@ -207,10 +207,11 @@ defmodule AyeSQLTest do
       expected =
         Query.new(
           arguments: ["server0", "server1"],
-          statement: "SELECT s.hostname, m.ram " <>
-                     "FROM metrics AS m JOIN server AS s " <>
-                     "ON s.id = m.server_id WHERE s.hostname IN " <>
-                     "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
+          statement:
+            "SELECT s.hostname, m.ram " <>
+              "FROM metrics AS m JOIN server AS s " <>
+              "ON s.id = m.server_id WHERE s.hostname IN " <>
+              "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
         )
 
       assert {:ok, ^expected} =

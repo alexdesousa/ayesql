@@ -41,11 +41,11 @@ defmodule AyeSQL.AST.Context do
   AST context.
   """
   @type t :: %__MODULE__{
-    index: index :: index(),
-    statement: statement :: statement(),
-    arguments: arguments :: arguments(),
-    errors: errors :: [error()]
-  }
+          index: index :: index(),
+          statement: statement :: statement(),
+          arguments: arguments :: arguments(),
+          errors: errors :: [error()]
+        }
 
   ############
   # Public API
@@ -83,7 +83,7 @@ defmodule AyeSQL.AST.Context do
   end
 
   def put_statement(%Context{statement: stmt} = context, value)
-        when is_binary(value) do
+      when is_binary(value) do
     %Context{context | statement: [value | stmt]}
   end
 
@@ -104,7 +104,7 @@ defmodule AyeSQL.AST.Context do
   def add_index(context, value \\ 1)
 
   def add_index(%Context{index: index} = context, value)
-        when is_integer(value) and value > 0 do
+      when is_integer(value) and value > 0 do
     %Context{context | index: index + value}
   end
 
@@ -210,9 +210,10 @@ defmodule AyeSQL.AST.Context do
   def not_found(context, key)
 
   def not_found(%Context{statement: statement, errors: errors} = context, key) do
-    %Context{context |
-      statement: ["<missing #{key}>" | statement],
-      errors: Keyword.put(errors, key, :not_found)
+    %Context{
+      context
+      | statement: ["<missing #{key}>" | statement],
+        errors: Keyword.put(errors, key, :not_found)
     }
   end
 
@@ -223,7 +224,8 @@ defmodule AyeSQL.AST.Context do
   @spec set_optional(t(), atom(), term()) :: t() | no_return()
   def set_optional(context, key, value)
 
-  def set_optional(%Context{} = context, :index, index) when is_integer(index) do
+  def set_optional(%Context{} = context, :index, index)
+      when is_integer(index) do
     %Context{context | index: index}
   end
 
@@ -239,8 +241,17 @@ defmodule AyeSQL.AST.Context do
     %Context{context | arguments: args}
   end
 
-  def set_optional(%Context{} = context, :errors, errors) when is_list(errors) do
-    %Context{context | errors: errors}
+  def set_optional(%Context{} = context, :errors, errors)
+      when is_list(errors) do
+    is_error = fn e ->
+      is_tuple(e) and is_atom(elem(e, 0)) and tuple_size(e) == 2
+    end
+
+    if Enum.all?(errors, is_error) do
+      %Context{context | errors: errors}
+    else
+      raise ArgumentError, message: "errors should be a keyword list"
+    end
   end
 
   def set_optional(context, _, _) do

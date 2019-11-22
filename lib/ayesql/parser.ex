@@ -151,6 +151,7 @@ defmodule AyeSQL.Parser do
   @doc false
   @spec gen_docs(docs(), content()) :: binary() | boolean()
   def gen_docs("", _content), do: false
+
   def gen_docs(docs, content) do
     params = Enum.filter(content, &is_atom/1)
 
@@ -184,6 +185,7 @@ defmodule AyeSQL.Parser do
   @doc false
   @spec gen_docs!(docs()) :: binary() | boolean()
   def gen_docs!(""), do: false
+
   def gen_docs!(docs) do
     """
     #{docs}. On error, fails (See function without bang for
