@@ -2,24 +2,77 @@ defmodule AyeSQL do
   @moduledoc """
   > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
 
-  _AyeSQL_ is a small Elixir library for using raw SQL.
+  _AyeSQL_ is a library for using raw SQL.
 
   ## Overview
 
-  Inspired on Clojure library [Yesql](https://github.com/krisajenkins/yesql),
-  _AyeSQL_ tries to find a middle ground between those two approaches by:
+  Inspired by Clojure library [Yesql](https://github.com/krisajenkins/yesql),
+  _AyeSQL_ tries to find a middle ground between strings with raw SQL queries and
+  SQL DSLs by:
 
-  - Keeping the SQL in SQL files.
+  - Keeping SQL in SQL files.
   - Generating Elixir functions for every query.
-  - Having mandatory and optional named parameters.
+  - Supporting mandatory and optional named parameters.
   - Allowing query composability with ease.
+  - Working out of the box with PostgreSQL using
+    [Ecto](https://github.com/elixir-ecto/ecto_sql) or
+    [Postgrex](https://github.com/elixir-ecto/postgrex):
+  - Being extended to support other databases via the behaviour `AyeSQL.Runner`.
 
-  Using the previous query, we would create a SQL file with the following
-  contents:
+  ## Small Example
+
+  Let's say we have an
+  [SQL query](https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0)
+  to retrieve the click count of a certain type of link every day of the last `X`
+  days. In raw SQL this could be written as:
+
+  ```sql
+      WITH computed_dates AS (
+             SELECT dates::date AS date
+               FROM generate_series(
+                      current_date - $1::interval,
+                      current_date - interval '1 day',
+                      interval '1 day'
+                    ) AS dates
+           )
+    SELECT dates.date AS day, count(clicks.id) AS count
+      FROM computed_dates AS dates
+           LEFT JOIN clicks AS clicks ON date(clicks.inserted_at) = dates.date
+     WHERE clicks.link_id = $2
+  GROUP BY dates.date
+  ORDER BY dates.date;
+  ```
+
+  The equivalent query in Ecto would be:
+
+  ```elixir
+  dates = ~s(
+  SELECT generate_series(
+           current_date - ?::interval,
+           current_date - interval '1 day',
+           interval '1 day'
+         )::date AS d
+  )
+
+  from(
+    c in "clicks",
+    right_join: day in fragment(dates, ^days),
+    on: day.d == fragment("date(?)", c.inserted_at),
+    where: c.link_id = ^link_id
+    group_by: day.d,
+    order_by: day.d,
+    select: %{
+      day: fragment("date(?)", day.d),
+      count: count(c.id)
+    }
+  )
+  ```
+
+  Using fragments can get convoluted and difficult to maintain. In AyeSQL, the
+  equivalent would be to create an SQL file with the query e.g. `queries.sql`:
 
   ```sql
   -- name: get_day_interval
-  -- This query do not have docs, so it's private.
   SELECT datetime::date AS date
     FROM generate_series(
           current_date - :days::interval, -- Named parameter :days
@@ -38,7 +91,7 @@ defmodule AyeSQL do
   ORDER BY dates.date;
   ```
 
-  In Elixir we would load all the queries in this file by creating the following
+  In Elixir, we would load all the queries in this file by creating the following
   module:
 
   ```elixir
@@ -58,7 +111,7 @@ defmodule AyeSQL do
   ```
 
   Both approaches will create a module called `Queries` with all the queries
-  defined in `"queries.sql"`.
+  defined in `queries.sql`.
 
   And then we could execute the query as follows:
 
@@ -71,6 +124,8 @@ defmodule AyeSQL do
   {:ok,
     [
       %{day: ..., count: ...},
+      %{day: ..., count: ...},
+      %{day: ..., count: ...},
       ...
     ]
   }
@@ -82,9 +137,7 @@ defmodule AyeSQL do
   @doc """
   Uses `AyeSQL` for loading queries.
 
-  The available options are:
-
-  - `runner`: module handling the query.
+  By default, supports the option `runner` (see `AyeSQL.Runner` behaviour).
 
   Any other option will be passed to the runner.
   """
@@ -153,7 +206,7 @@ defmodule AyeSQL do
   @doc """
   Macro to load queries from a `file`.
 
-  Let's say we have the file `my_queries.sql` with the following contents:
+  Let's say we have the file `lib/sql/queries.sql` with the following contents:
 
   ```sql
   -- name: get_user
@@ -163,36 +216,53 @@ defmodule AyeSQL do
    WHERE username = :username;
   ```
 
-  We can load our queries to Elixir using the macro `defqueries/1` as follows:
+  Then we can load our queries to Elixir using the macro `defqueries/1`:
 
   ```
+  # file: lib/queries.ex
   defmodule Queries do
     use AyeSQL, repo: MyRepo
 
-    defqueries("my_queries.sql")
+    defqueries("sql/queries.sql")
   end
   ```
 
-  We can now do the following to get the SQL and the ordered arguments:
+  or the macro `defqueries/3`:
 
   ```
-  iex(1)> Queries.get_user!(%{username: "some_user"})
-  {"SELECT * FROM user WHERE username = $1", ["some_user"]}
+  # file: lib/queries.ex
+  import AyeSQL, only: [defqueries: 3]
+
+  defqueries(Queries, "sql/queries.ex", repo: MyRepo)
   ```
 
-  If we would like to execute the previous query directly, the we could do the
-  following:
+  And finally we can inspect the query:
 
   ```
-  iex(1)> Queries.get_user!(%{username: "some_user"}, run?: true)
-  %Postgrex.Result{...}
+  iex(1)> Queries.get_user!(username: "some_user")
+  {:ok,
+    %AyeSQL.Query{
+      statement: "SELECT * FROM user WHERE username = $1",
+      arguments: ["some_user"]
+    }
+  }
   ```
 
-  We can also run the query by composing it with the `Queries.run/1` function
-  generated in the module e.g:
+  or run it:
+
   ```
-  iex(1)> %{username: "some_user"} |> Queries.get_user!() |> Queries.run!()
-  %Postgrex.Result{...}
+  iex(1)> Queries.get_user!(username: "some_user", run?: true)
+  {:ok,
+    [
+      %{username: ..., ...}
+    ]
+  }
+  ```
+
+  For running it by default, we can set the following in our configuration:
+
+  ```
+  config :ayesql, run?: true
   ```
   """
   defmacro defqueries(relative) do
@@ -208,16 +278,18 @@ defmodule AyeSQL do
   @doc """
   Macro to load queries from a `file` and create a module for them.
 
-  Same as `defqueries/1`, but creates a module e.g:
+  Same as `defqueries/1`, but creates a module e.g for the query file
+  `lib/sql/queries.sql` we can use this macro as follows:
 
   ```
-  use AyeSQL, repo: MyRepo
+  # file: lib/queries.ex
+  import AyeSQL, only: [defqueries: 3]
 
-  defqueries(Queries, "my_queries.sql")
+  defqueries(Queries, "sql/queries.sql", repo: MyRepo)
   ```
 
   This will generate the module `Queries` and it'll contain all the SQL
-  statements included in `"sql/my_queries.sql"`.
+  statements included in `sql/queries.sql`.
   """
   defmacro defqueries(module, relative, options) do
     quote do
