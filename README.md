@@ -6,6 +6,21 @@
 
 _AyeSQL_ is a library for using raw SQL.
 
+## Overview
+
+Inspired by Clojure library [Yesql](https://github.com/krisajenkins/yesql),
+_AyeSQL_ tries to find a middle ground between strings with raw SQL queries and
+SQL DSLs by:
+
+- Keeping SQL in SQL files.
+- Generating Elixir functions for every query.
+- Supporting mandatory and optional named parameters.
+- Allowing query composability with ease.
+- Working out of the box with PostgreSQL using
+  [Ecto](https://github.com/elixir-ecto/ecto_sql) or
+  [Postgrex](https://github.com/elixir-ecto/postgrex):
+- Being extended to support other databases via the behaviour `AyeSQL.Runner`.
+
 ## Why raw SQL?
 
 Writing and running raw SQL in Elixir is not pretty. Not only the lack of
@@ -106,18 +121,10 @@ intricacies of using Ecto fragments.
 - Queries using fragments cannot use aliases defined in schemas, so the
 code becomes inconsistent.
 
-## Overview
+## Small Example
 
-Inspired on Clojure library [Yesql](https://github.com/krisajenkins/yesql),
-_AyeSQL_ tries to find a middle ground between those two approaches by:
-
-- Keeping the SQL in SQL files.
-- Generating Elixir functions for every query.
-- Having mandatory and optional named parameters.
-- Allowing query composability with ease.
-
-Using the previous query, we would create a SQL file with the following
-contents:
+In AyeSQL, the equivalent would be to create an SQL file with the query e.g.
+`queries.sql`:
 
 ```sql
 -- name: get_day_interval
@@ -140,7 +147,7 @@ GROUP BY dates.date
 ORDER BY dates.date;
 ```
 
-In Elixir we would load all the queries in this file by creating the following
+In Elixir, we would load all the queries in this file by creating the following
 module:
 
 ```elixir
@@ -160,7 +167,7 @@ defqueries(Queries, "queries.sql", repo: MyRepo)
 ```
 
 Both approaches will create a module called `Queries` with all the queries
-defined in `"queries.sql"`.
+defined in `queries.sql`.
 
 And then we could execute the query as follows:
 
@@ -172,6 +179,8 @@ iex> params = [
 iex> Queries.get_avg_clicks(params, run?: true)
 {:ok,
   [
+    %{day: ..., count: ...},
+    %{day: ..., count: ...},
     %{day: ..., count: ...},
     ...
   ]

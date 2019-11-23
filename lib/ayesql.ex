@@ -2,24 +2,77 @@ defmodule AyeSQL do
   @moduledoc """
   > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
 
-  _AyeSQL_ is a small Elixir library for using raw SQL.
+  _AyeSQL_ is a library for using raw SQL.
 
   ## Overview
 
-  Inspired on Clojure library [Yesql](https://github.com/krisajenkins/yesql),
-  _AyeSQL_ tries to find a middle ground between those two approaches by:
+  Inspired by Clojure library [Yesql](https://github.com/krisajenkins/yesql),
+  _AyeSQL_ tries to find a middle ground between strings with raw SQL queries and
+  SQL DSLs by:
 
-  - Keeping the SQL in SQL files.
+  - Keeping SQL in SQL files.
   - Generating Elixir functions for every query.
-  - Having mandatory and optional named parameters.
+  - Supporting mandatory and optional named parameters.
   - Allowing query composability with ease.
+  - Working out of the box with PostgreSQL using
+    [Ecto](https://github.com/elixir-ecto/ecto_sql) or
+    [Postgrex](https://github.com/elixir-ecto/postgrex):
+  - Being extended to support other databases via the behaviour `AyeSQL.Runner`.
 
-  Using the previous query, we would create a SQL file with the following
-  contents:
+  ## Small Example
+
+  Let's say we have an
+  [SQL query](https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0)
+  to retrieve the click count of a certain type of link every day of the last `X`
+  days. In raw SQL this could be written as:
+
+  ```sql
+      WITH computed_dates AS (
+             SELECT dates::date AS date
+               FROM generate_series(
+                      current_date - $1::interval,
+                      current_date - interval '1 day',
+                      interval '1 day'
+                    ) AS dates
+           )
+    SELECT dates.date AS day, count(clicks.id) AS count
+      FROM computed_dates AS dates
+           LEFT JOIN clicks AS clicks ON date(clicks.inserted_at) = dates.date
+     WHERE clicks.link_id = $2
+  GROUP BY dates.date
+  ORDER BY dates.date;
+  ```
+
+  The equivalent query in Ecto would be:
+
+  ```elixir
+  dates = ~s(
+  SELECT generate_series(
+           current_date - ?::interval,
+           current_date - interval '1 day',
+           interval '1 day'
+         )::date AS d
+  )
+
+  from(
+    c in "clicks",
+    right_join: day in fragment(dates, ^days),
+    on: day.d == fragment("date(?)", c.inserted_at),
+    where: c.link_id = ^link_id
+    group_by: day.d,
+    order_by: day.d,
+    select: %{
+      day: fragment("date(?)", day.d),
+      count: count(c.id)
+    }
+  )
+  ```
+
+  Using fragments can get convoluted and difficult to maintain. In AyeSQL, the
+  equivalent would be to create an SQL file with the query e.g. `queries.sql`:
 
   ```sql
   -- name: get_day_interval
-  -- This query do not have docs, so it's private.
   SELECT datetime::date AS date
     FROM generate_series(
           current_date - :days::interval, -- Named parameter :days
@@ -38,7 +91,7 @@ defmodule AyeSQL do
   ORDER BY dates.date;
   ```
 
-  In Elixir we would load all the queries in this file by creating the following
+  In Elixir, we would load all the queries in this file by creating the following
   module:
 
   ```elixir
@@ -58,7 +111,7 @@ defmodule AyeSQL do
   ```
 
   Both approaches will create a module called `Queries` with all the queries
-  defined in `"queries.sql"`.
+  defined in `queries.sql`.
 
   And then we could execute the query as follows:
 
@@ -70,6 +123,8 @@ defmodule AyeSQL do
   iex> Queries.get_avg_clicks(params, run?: true)
   {:ok,
     [
+      %{day: ..., count: ...},
+      %{day: ..., count: ...},
       %{day: ..., count: ...},
       ...
     ]
