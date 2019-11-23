@@ -137,9 +137,7 @@ defmodule AyeSQL do
   @doc """
   Uses `AyeSQL` for loading queries.
 
-  The available options are:
-
-  - `runner`: module handling the query.
+  By default, supports the option `runner` (see `AyeSQL.Runner` behaviour).
 
   Any other option will be passed to the runner.
   """
@@ -208,7 +206,7 @@ defmodule AyeSQL do
   @doc """
   Macro to load queries from a `file`.
 
-  Let's say we have the file `my_queries.sql` with the following contents:
+  Let's say we have the file `lib/sql/queries.sql` with the following contents:
 
   ```sql
   -- name: get_user
@@ -218,36 +216,53 @@ defmodule AyeSQL do
    WHERE username = :username;
   ```
 
-  We can load our queries to Elixir using the macro `defqueries/1` as follows:
+  Then we can load our queries to Elixir using the macro `defqueries/1`:
 
   ```
+  # file: lib/queries.ex
   defmodule Queries do
     use AyeSQL, repo: MyRepo
 
-    defqueries("my_queries.sql")
+    defqueries("sql/queries.sql")
   end
   ```
 
-  We can now do the following to get the SQL and the ordered arguments:
+  or the macro `defqueries/3`:
 
   ```
-  iex(1)> Queries.get_user!(%{username: "some_user"})
-  {"SELECT * FROM user WHERE username = $1", ["some_user"]}
+  # file: lib/queries.ex
+  import AyeSQL, only: [defqueries: 3]
+
+  defqueries(Queries, "sql/queries.ex", repo: MyRepo)
   ```
 
-  If we would like to execute the previous query directly, the we could do the
-  following:
+  And finally we can inspect the query:
 
   ```
-  iex(1)> Queries.get_user!(%{username: "some_user"}, run?: true)
-  %Postgrex.Result{...}
+  iex(1)> Queries.get_user!(username: "some_user")
+  {:ok,
+    %AyeSQL.Query{
+      statement: "SELECT * FROM user WHERE username = $1",
+      arguments: ["some_user"]
+    }
+  }
   ```
 
-  We can also run the query by composing it with the `Queries.run/1` function
-  generated in the module e.g:
+  or run it:
+
   ```
-  iex(1)> %{username: "some_user"} |> Queries.get_user!() |> Queries.run!()
-  %Postgrex.Result{...}
+  iex(1)> Queries.get_user!(username: "some_user", run?: true)
+  {:ok,
+    [
+      %{username: ..., ...}
+    ]
+  }
+  ```
+
+  For running it by default, we can set the following in our configuration:
+
+  ```
+  config :ayesql, run?: true
   ```
   """
   defmacro defqueries(relative) do
@@ -263,16 +278,18 @@ defmodule AyeSQL do
   @doc """
   Macro to load queries from a `file` and create a module for them.
 
-  Same as `defqueries/1`, but creates a module e.g:
+  Same as `defqueries/1`, but creates a module e.g for the query file
+  `lib/sql/queries.sql` we can use this macro as follows:
 
   ```
-  use AyeSQL, repo: MyRepo
+  # file: lib/queries.ex
+  import AyeSQL, only: [defqueries: 3]
 
-  defqueries(Queries, "my_queries.sql")
+  defqueries(Queries, "sql/queries.sql", repo: MyRepo)
   ```
 
   This will generate the module `Queries` and it'll contain all the SQL
-  statements included in `"sql/my_queries.sql"`.
+  statements included in `sql/queries.sql`.
   """
   defmacro defqueries(module, relative, options) do
     quote do
