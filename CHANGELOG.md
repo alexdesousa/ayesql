@@ -1,5 +1,17 @@
 # Changelog
 
+## v0.5.2
+
+### Enhancements
+
+  * Fixed dialyzer warnings for unexistent type `AyeSQL.Core.query()`.
+
+## v0.5.1
+
+### Enhancements
+
+  * Improved documentation.
+
 ## v0.5.0
 
 This version maintains the same query language, but it breaks runners as now
