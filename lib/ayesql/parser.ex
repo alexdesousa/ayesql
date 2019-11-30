@@ -100,9 +100,11 @@ defmodule AyeSQL.Parser do
     quote do
       @doc AyeSQL.Parser.gen_docs(unquote(docs), unquote(content))
       @spec unquote(name)(AyeSQL.Core.parameters()) ::
-              {:ok, AyeSQL.Core.query()} | {:ok, term()} | {:error, term()}
+              {:ok, AyeSQL.Query.t() | term()}
+              | {:error, AyeSQL.Error.t() | term()}
       @spec unquote(name)(AyeSQL.Core.parameters(), AyeSQL.Core.options()) ::
-              {:ok, AyeSQL.Core.query()} | {:ok, term()} | {:error, term()}
+              {:ok, AyeSQL.Query.t() | term()}
+              | {:error, AyeSQL.Error.t() | term()}
       def unquote(name)(params, options \\ [])
 
       def unquote(name)(params, options) do
@@ -127,9 +129,9 @@ defmodule AyeSQL.Parser do
     quote do
       @doc AyeSQL.Parser.gen_docs!(unquote(docs))
       @spec unquote(name!)(AyeSQL.Core.parameters()) ::
-              AyeSQL.Core.query() | term() | no_return()
+              AyeSQL.Query.t() | term() | no_return()
       @spec unquote(name!)(AyeSQL.Core.parameters(), AyeSQL.Core.options()) ::
-              AyeSQL.Core.query() | term() | no_return()
+              AyeSQL.Query.t() | term() | no_return()
       def unquote(name!)(params, options \\ [])
 
       def unquote(name!)(params, options) do
