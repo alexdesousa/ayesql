@@ -36,16 +36,14 @@ tokenize(Binary) ->
 new_comment(TokenLine, "-- name:" ++ TokenChars) ->
   Value = string:trim(TokenChars),
   {token, {name, TokenLine, list_to_atom(Value)}};
-new_comment(TokenLine, "\n-- name:" ++ TokenChars) ->
-  Value = string:trim(TokenChars),
-  {token, {name, TokenLine, list_to_atom(Value)}};
-new_comment(TokenLine, "\n-- docs:" ++ TokenChars) ->
+new_comment(TokenLine, "-- docs:" ++ TokenChars) ->
   Value = string:trim(TokenChars),
   {token, {docs, TokenLine, list_to_binary(Value)}};
 new_comment(_, "--" ++ _) ->
   skip_token;
-new_comment(TokenLine, "\n" ++ TokenChars) ->
-  new_comment(TokenLine, TokenChars).
+new_comment(TokenLine, TokenChars0) ->
+  TokenChars1 = string:trim(TokenChars0),
+  new_comment(TokenLine, TokenChars1).
 
 new_param(TokenLine, [$: | Name]) ->
   Key = list_to_atom(Name),

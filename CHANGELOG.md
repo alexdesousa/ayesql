@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.3
+
+### Bug fix
+
+  * Added support for Windows new line.
+
 ## v0.5.2
 
 ### Enhancements

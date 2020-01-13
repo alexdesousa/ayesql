@@ -1,9 +1,19 @@
 defmodule AyeSQL.QueriesLexerTest do
   use ExUnit.Case, async: true
 
-  test "ignores comment" do
+  test "ignores comment at the beginning of the file" do
     comment = "-- Some comment"
     assert {:ok, [], _} = :queries_lexer.tokenize(comment)
+  end
+
+  test "ignores comment with Unix new line char" do
+    comment = "\n-- Some comment"
+    assert {:ok, [{:fragment, 1, " "}], _} = :queries_lexer.tokenize(comment)
+  end
+
+  test "ignores comment with Windows new line char" do
+    comment = "\r\n-- Some comment"
+    assert {:ok, [{:fragment, 1, " "}], _} = :queries_lexer.tokenize(comment)
   end
 
   test "detects name at the beginning of the file" do
@@ -11,13 +21,23 @@ defmodule AyeSQL.QueriesLexerTest do
     assert {:ok, [{:name, _, :some_name}], _} = :queries_lexer.tokenize(name)
   end
 
-  test "detects name" do
+  test "detects name with Unix new line char" do
     name = "\n-- name: some_name"
     assert {:ok, [{:name, _, :some_name}], _} = :queries_lexer.tokenize(name)
   end
 
-  test "detects docs" do
+  test "detects docs with Unix new line char" do
     docs = "\n-- docs: Some docs"
+    assert {:ok, [{:docs, _, "Some docs"}], _} = :queries_lexer.tokenize(docs)
+  end
+
+  test "detects name with Windows new line char" do
+    name = "\r\n-- name: some_name"
+    assert {:ok, [{:name, _, :some_name}], _} = :queries_lexer.tokenize(name)
+  end
+
+  test "detects docs with Windows new line char" do
+    docs = "\r\n-- docs: Some docs"
     assert {:ok, [{:docs, _, "Some docs"}], _} = :queries_lexer.tokenize(docs)
   end
 
