@@ -100,6 +100,19 @@ defmodule AyeSQLTest do
                Complex.get_server_by_hostname(params, run?: false)
     end
 
+    test "can expand a regular param when is nil" do
+      params = [hostname: nil]
+
+      expected =
+        Query.new(
+          arguments: [nil],
+          statement: "SELECT * FROM server WHERE hostname = $1"
+        )
+
+      assert {:ok, ^expected} =
+               Complex.get_server_by_hostname(params, run?: false)
+    end
+
     test "can expand optional parameters when not present" do
       params = [hostname: "localhost"]
 

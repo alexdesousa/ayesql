@@ -72,7 +72,7 @@ defmodule AyeSQL.AST do
   defp expand_param_fn(key) do
     fn %Context{} = context, params ->
       case fetch(params, key) do
-        nil ->
+        :not_found ->
           Context.not_found(context, key)
 
         value ->
@@ -124,7 +124,7 @@ defmodule AyeSQL.AST do
   defp fetch(values, atom)
 
   defp fetch(values, atom) when is_map(values) do
-    default = if optional?(atom), do: :empty, else: nil
+    default = if optional?(atom), do: :empty, else: :not_found
 
     Map.get(values, atom, default)
   end

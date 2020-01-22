@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.4
+
+### Bug fix
+
+  * Added support for `nil` values for parameters (`NULL`).
+
 ## v0.5.3
 
 ### Bug fix
