@@ -1,7 +1,7 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.5.4"
+  @version "0.5.5"
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do
@@ -41,7 +41,8 @@ defmodule Ayesql.MixProject do
       {:ecto_sql, ">= 2.0.0", optional: true},
       {:postgrex, ">= 0.0.0", optional: true},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:credo, "~> 1.1", only: :dev, runtime: false}
+      {:credo, "~> 1.2", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0.0-rc.7", only: :dev, runtime: false}
     ]
   end
 
