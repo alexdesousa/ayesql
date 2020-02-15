@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.5
+
+### Bug fix
+
+  * Added missing support for function calls by name in parameters.
+
 ## v0.5.4
 
 ### Bug fix

@@ -8,6 +8,9 @@ defmodule AyeSQL.AST do
   alias AyeSQL.Query
   alias AyeSQL.Parser
 
+  @empty :"$AYESQL_EMPTY"
+  @not_found :"$AYESQL_NOT_FOUND"
+
   @typedoc """
   Function to be applied with some parameters and context.
   """
@@ -21,7 +24,10 @@ defmodule AyeSQL.AST do
 
   @typedoc false
   @type value ::
-          {:in, [term()]}
+          :"$AYESQL_EMPTY"
+          | :"$AYESQL_NOT_FOUND"
+          | {:in, [term()]}
+          | atom()
           | query_function()
           | term()
 
@@ -47,7 +53,7 @@ defmodule AyeSQL.AST do
     if is_query?(module, key) do
       expand_function_fn(module, key)
     else
-      expand_param_fn(key)
+      expand_param_fn(module, key)
     end
   end
 
@@ -63,20 +69,32 @@ defmodule AyeSQL.AST do
   @spec expand_function_fn(module(), atom()) :: expand_function()
   defp expand_function_fn(module, key) do
     fn %Context{} = context, params ->
-      expand_value(&apply(module, key, [&1, &2]), context, params)
+      expand_remote_function({module, key}, context, params)
     end
   end
 
   # Function to process parameters.
-  @spec expand_param_fn(atom()) :: expand_function()
-  defp expand_param_fn(key) do
+  @spec expand_param_fn(module(), atom()) :: expand_function()
+  defp expand_param_fn(module, key) do
     fn %Context{} = context, params ->
       case fetch(params, key) do
-        :not_found ->
+        @not_found ->
           Context.not_found(context, key)
 
+        @empty ->
+          Context.id(context)
+
+        {:in, values} when is_list(values) ->
+          Context.put_variables(context, values)
+
+        local_function when is_atom(local_function) ->
+          expand_local_function(module, local_function, context, params)
+
+        remote_function when is_function(remote_function) ->
+          expand_remote_function(remote_function, context, params)
+
         value ->
-          expand_value(value, context, params)
+          Context.put_variable(context, value)
       end
     end
   end
@@ -84,20 +102,32 @@ defmodule AyeSQL.AST do
   #########
   # Helpers
 
-  # Expands values
-  @spec expand_value(value(), Context.t(), Core.parameters()) :: Context.t()
-  defp expand_value(value, context, params)
+  # Expands local function
+  @spec expand_local_function(module(), atom(), Context.t(), Core.parameters()) ::
+          Context.t()
+  defp expand_local_function(module, local, context, params)
 
-  defp expand_value(:empty, %Context{} = context, _) do
-    Context.id(context)
+  defp expand_local_function(module, value, %Context{} = context, params) do
+    if is_query?(module, value) do
+      expand_remote_function({module, value}, context, params)
+    else
+      Context.put_variable(context, value)
+    end
   end
 
-  defp expand_value({:in, vals}, %Context{} = context, _) when is_list(vals) do
-    Context.put_variables(context, vals)
+  # Expands remote function
+  @spec expand_remote_function(
+          query_function() | {module(), atom()},
+          Context.t(),
+          Core.parameters()
+        ) :: Context.t()
+  defp expand_remote_function(fun, context, params)
+
+  defp expand_remote_function({module, name}, %Context{} = context, params) do
+    expand_remote_function(&apply(module, name, [&1, &2]), context, params)
   end
 
-  defp expand_value(fun, %Context{index: index} = context, params)
-       when is_function(fun) do
+  defp expand_remote_function(fun, %Context{index: index} = context, params) do
     case fun.(params, index: index, run?: false) do
       {:ok, %Query{} = query} ->
         Context.merge_query(context, query)
@@ -105,10 +135,6 @@ defmodule AyeSQL.AST do
       {:error, %Error{} = error} ->
         Context.merge_error(context, error)
     end
-  end
-
-  defp expand_value(value, %Context{} = context, _) do
-    Context.put_variable(context, value)
   end
 
   # Whether an atom is a query o not.
@@ -120,11 +146,16 @@ defmodule AyeSQL.AST do
   end
 
   # Fetches values from a map or a Keyword list.
-  @spec fetch(Core.parameters(), Core.parameter_name()) :: :empty | term()
+  @spec fetch(Core.parameters(), Core.parameter_name()) :: value()
   defp fetch(values, atom)
 
   defp fetch(values, atom) when is_map(values) do
-    default = if optional?(atom), do: :empty, else: :not_found
+    default =
+      if optional?(atom) do
+        @empty
+      else
+        @not_found
+      end
 
     Map.get(values, atom, default)
   end

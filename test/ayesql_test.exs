@@ -214,6 +214,21 @@ defmodule AyeSQLTest do
                Complex.get_servers_by_hostnames(params, run?: false)
     end
 
+    test "can expand with a function name" do
+      params = [hostnames: :get_hostnames]
+
+      expected =
+        Query.new(
+          arguments: [],
+          statement:
+            "SELECT * FROM server WHERE hostname IN " <>
+              "( SELECT hostname FROM server )"
+        )
+
+      assert {:ok, ^expected} =
+               Complex.get_servers_by_hostnames(params, run?: false)
+    end
+
     test "can expand with a function key" do
       params = [hostnames: {:in, ["server0", "server1"]}]
 
