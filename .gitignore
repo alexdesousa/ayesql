@@ -25,6 +25,9 @@ ayesql-*.tar
 # Ignore .iex.exs
 .iex.exs
 
+# Ignore Elixir language server files
+.elixir_ls
+
 # Ignore generated parser and lexer.
 src/queries_lexer.erl
 src/queries_parser.erl
