@@ -3,7 +3,6 @@ defmodule AyeSQLTest do
   use AyeSQL, repo: MyRepo
 
   alias AyeSQL.Error
-  alias AyeSQL.Query
 
   defmodule TestRunner do
     use AyeSQL.Runner
@@ -73,182 +72,205 @@ defmodule AyeSQLTest do
     end
   end
 
-  describe "when functions are generated" do
+  describe "when query does not need parameters" do
     import AyeSQL, only: [defqueries: 3]
-    defqueries(Complex, "support/complex.sql", runner: TestRunner)
 
-    test "can expand query without params" do
-      expected =
-        Query.new(
-          arguments: [],
-          statement: "SELECT hostname FROM server"
-        )
+    defqueries(NoParam, "support/no_param.sql", runner: TestRunner)
 
-      assert {:ok, ^expected} = Complex.get_hostnames([], run?: false)
+    test "can expand query with empty params list" do
+      stmt = "SELECT hostname FROM server"
+
+      assert {:ok, {^stmt, [], _}} = NoParam.get_hostnames([], run?: true)
     end
+  end
+
+  describe "when query receives mandatory parameters" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(Simple, "support/simple.sql", runner: TestRunner)
 
     test "can expand a regular param" do
       params = [hostname: "localhost"]
+      args = ["localhost"]
+      stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      expected =
-        Query.new(
-          arguments: ["localhost"],
-          statement: "SELECT * FROM server WHERE hostname = $1"
-        )
-
-      assert {:ok, ^expected} =
-               Complex.get_server_by_hostname(params, run?: false)
+      assert {:ok, {^stmt, ^args, _}} =
+               Simple.get_server_by_hostname(params, run?: true)
     end
 
     test "can expand a regular param when is nil" do
       params = [hostname: nil]
+      args = [nil]
+      stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      expected =
-        Query.new(
-          arguments: [nil],
-          statement: "SELECT * FROM server WHERE hostname = $1"
-        )
-
-      assert {:ok, ^expected} =
-               Complex.get_server_by_hostname(params, run?: false)
-    end
-
-    test "can expand optional parameters when not present" do
-      params = [hostname: "localhost"]
-
-      expected =
-        Query.new(
-          arguments: ["localhost"],
-          statement: "SELECT * FROM server WHERE hostname = $1 "
-        )
-
-      assert {:ok, ^expected} = Complex.get_servers(params, run?: false)
-    end
-
-    test "can expand optional parameters when present" do
-      params = [
-        hostname: "localhost",
-        _by_location: &Complex.by_location/2,
-        location: "Barcelona"
-      ]
-
-      expected =
-        Query.new(
-          arguments: ["localhost", "Barcelona"],
-          statement:
-            "SELECT * FROM server WHERE hostname = $1 AND location = $2"
-        )
-
-      assert {:ok, ^expected} = Complex.get_servers(params, run?: false)
+      assert {:ok, {^stmt, ^args, _}} =
+               Simple.get_server_by_hostname(params, run?: true)
     end
 
     test "errors on missing parameters" do
       assert {:error, %Error{errors: [hostname: :not_found]}} =
-               Complex.get_server_by_hostname([], run?: false)
+               Simple.get_server_by_hostname([], run?: true)
     end
 
     test "ignores undefined params" do
       params = [hostname: "localhost", foo: 42]
+      stmt = "SELECT * FROM server WHERE hostname = $1"
+      args = ["localhost"]
 
-      expected =
-        Query.new(
-          arguments: ["localhost"],
-          statement: "SELECT * FROM server WHERE hostname = $1"
-        )
-
-      assert {:ok, ^expected} =
-               Complex.get_server_by_hostname(params, run?: false)
+      assert {:ok, {^stmt, ^args, _}} =
+               Simple.get_server_by_hostname(params, run?: true)
     end
 
     test "accepts keyword list as parameters" do
       params = [hostname: "localhost"]
+      args = ["localhost"]
+      stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      expected =
-        Query.new(
-          arguments: ["localhost"],
-          statement: "SELECT * FROM server WHERE hostname = $1"
-        )
-
-      assert {:ok, ^expected} =
-               Complex.get_server_by_hostname(params, run?: false)
+      assert {:ok, {^stmt, ^args, _}} =
+               Simple.get_server_by_hostname(params, run?: true)
     end
 
     test "accepts map as parameters" do
       params = %{hostname: "localhost"}
+      args = ["localhost"]
+      stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      expected =
-        Query.new(
-          arguments: ["localhost"],
-          statement: "SELECT * FROM server WHERE hostname = $1"
-        )
+      assert {:ok, {^stmt, ^args, _}} =
+               Simple.get_server_by_hostname(params, run?: true)
+    end
+  end
 
-      assert {:ok, ^expected} =
-               Complex.get_server_by_hostname(params, run?: false)
+  describe "when queries receive optional parameters" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(Optional, "support/optional.sql", runner: TestRunner)
+
+    test "can expand optional parameters when not present" do
+      params = [hostname: "localhost"]
+      stmt = "SELECT * FROM server WHERE hostname = $1"
+      args = ["localhost"]
+
+      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params, run?: true)
     end
 
-    test "can expand an IN query" do
-      params = [hostnames: {:in, ["server0", "server1"]}]
+    test "can expand optional parameters when with function" do
+      params = [
+        hostname: "localhost",
+        _by_location: &Optional.by_location/2,
+        location: "Barcelona"
+      ]
 
-      expected =
-        Query.new(
-          arguments: ["server0", "server1"],
-          statement: "SELECT * FROM server WHERE hostname IN ( $1,$2 )"
-        )
+      stmt = "SELECT * FROM server WHERE hostname = $1 AND location = $2"
+      args = ["localhost", "Barcelona"]
 
-      assert {:ok, ^expected} =
-               Complex.get_servers_by_hostnames(params, run?: false)
+      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params, run?: true)
+    end
+
+    test "can expand optional parameters when with function name" do
+      params = [
+        hostname: "localhost",
+        _by_location: :by_location,
+        location: "Barcelona"
+      ]
+
+      stmt = "SELECT * FROM server WHERE hostname = $1 AND location = $2"
+      args = ["localhost", "Barcelona"]
+
+      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params, run?: true)
+    end
+  end
+
+  describe "when in statement is used" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(InStatement, "support/in_statement.sql", runner: TestRunner)
+
+    test "can expand an IN statement" do
+      params = [names: {:in, ["Alice", "Bob", "Charlie"]}]
+      stmt = "SELECT * FROM people WHERE name IN ( $1,$2,$3 )"
+      args = ["Alice", "Bob", "Charlie"]
+
+      assert {:ok, {^stmt, ^args, _}} =
+               InStatement.get_people(params, run?: true)
     end
 
     test "can expand with a function" do
-      params = [hostnames: &Complex.get_hostnames/2]
+      params = [names: &InStatement.get_names/2]
+      stmt = "SELECT * FROM people WHERE name IN ( SELECT name FROM people )"
 
-      expected =
-        Query.new(
-          arguments: [],
-          statement:
-            "SELECT * FROM server WHERE hostname IN " <>
-              "( SELECT hostname FROM server )"
-        )
-
-      assert {:ok, ^expected} =
-               Complex.get_servers_by_hostnames(params, run?: false)
+      assert {:ok, {^stmt, [], _}} = InStatement.get_people(params, run?: true)
     end
 
     test "can expand with a function name" do
-      params = [hostnames: :get_hostnames]
+      params = [names: :get_names]
+      stmt = "SELECT * FROM people WHERE name IN ( SELECT name FROM people )"
 
-      expected =
-        Query.new(
-          arguments: [],
-          statement:
-            "SELECT * FROM server WHERE hostname IN " <>
-              "( SELECT hostname FROM server )"
-        )
+      assert {:ok, {^stmt, [], _}} = InStatement.get_people(params, run?: true)
+    end
+  end
 
-      assert {:ok, ^expected} =
-               Complex.get_servers_by_hostnames(params, run?: false)
+  describe "when queries are composed in SQL" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(Composable, "support/composable.sql", runner: TestRunner)
+
+    test "can expand with a function name" do
+      stmt = "SELECT * FROM ( SELECT name FROM people )"
+
+      assert {:ok, {^stmt, [], _}} = Composable.get_people([], run?: true)
     end
 
-    test "can expand with a function key" do
-      params = [hostnames: {:in, ["server0", "server1"]}]
+    test "errors when inner query errors" do
+      assert {:error, %Error{errors: [age: :not_found]}} =
+               Composable.get_adults([], run?: true)
+    end
+  end
 
-      expected =
-        Query.new(
-          arguments: ["server0", "server1"],
-          statement:
-            "SELECT s.hostname, m.ram " <>
-              "FROM metrics AS m JOIN server AS s " <>
-              "ON s.id = m.server_id WHERE s.hostname IN " <>
-              "( SELECT * FROM server WHERE hostname IN ( $1,$2 ) )"
-        )
+  describe "when queries are composed in elixir" do
+    import AyeSQL, only: [defqueries: 3]
 
-      assert {:ok, ^expected} =
-               Complex.get_ram_by_hostnames(params, run?: false)
+    defqueries(Subquery, "support/subqueries.sql", runner: TestRunner)
+
+    test "can expand inner query with local functions" do
+      where = [:legal_age, :sql_and, {:name_like, [name: "Alice%"]}]
+      params = [where: {:inner, where}]
+
+      stmt = "SELECT name, age FROM person WHERE age >= 18 AND name LIKE $1"
+      args = ["Alice%"]
+
+      assert {:ok, {^stmt, ^args, _}} = Subquery.get_adults(params, run?: true)
     end
 
-    test "errors when missing inner function parameters" do
-      assert {:error, %Error{errors: [hostnames: :not_found]}} =
-               Complex.get_ram_by_hostnames([], run?: false)
+    test "can expand inner query with remote functions" do
+      where = [
+        &Subquery.legal_age/2,
+        &Subquery.sql_and/2,
+        {&Subquery.name_like/2, [name: "Alice%"]}
+      ]
+
+      params = [where: {:inner, where}]
+
+      stmt = "SELECT name, age FROM person WHERE age >= 18 AND name LIKE $1"
+      args = ["Alice%"]
+
+      assert {:ok, {^stmt, ^args, _}} = Subquery.get_adults(params, run?: true)
+    end
+
+    test "can use custom separator" do
+      order_by = [
+        by_age: [order_direction: :descending],
+        by_name: [order_direction: :ascending]
+      ]
+
+      params = [age: 18, order_by: {:inner, order_by, ", "}]
+
+      stmt =
+        "SELECT name, age FROM person WHERE age >= $1 ORDER BY age DESC, name ASC"
+
+      args = [18]
+
+      assert {:ok, {^stmt, ^args, _}} =
+               Subquery.get_people_by_age(params, run?: true)
     end
   end
 

@@ -5,8 +5,8 @@ defmodule AyeSQL.AST do
   alias AyeSQL.AST.Context
   alias AyeSQL.Core
   alias AyeSQL.Error
-  alias AyeSQL.Query
   alias AyeSQL.Parser
+  alias AyeSQL.Query
 
   @empty :"$AYESQL_EMPTY"
   @not_found :"$AYESQL_NOT_FOUND"
@@ -23,12 +23,25 @@ defmodule AyeSQL.AST do
              {:ok, Query.t()} | {:error, Error.t()})
 
   @typedoc false
+  @type local_query :: atom()
+
+  @typedoc false
+  @type remote_query :: query_function()
+
+  @typedoc false
+  @type query :: local_query() | remote_query()
+
+  @typedoc false
+  @type query_call :: query() | {query(), Core.parameters()}
+
+  @typedoc false
   @type value ::
           :"$AYESQL_EMPTY"
           | :"$AYESQL_NOT_FOUND"
           | {:in, [term()]}
-          | atom()
-          | query_function()
+          | {:inner, [query_call()]}
+          | {:inner, [query_call()], binary()}
+          | query()
           | term()
 
   #######################
@@ -87,6 +100,12 @@ defmodule AyeSQL.AST do
         {:in, values} when is_list(values) ->
           Context.put_variables(context, values)
 
+        {:inner, values} ->
+          expand_inner(module, values, context, params)
+
+        {:inner, values, separator} ->
+          expand_inner(module, values, separator, context, params)
+
         local_function when is_atom(local_function) ->
           expand_local_function(module, local_function, context, params)
 
@@ -101,6 +120,53 @@ defmodule AyeSQL.AST do
 
   #########
   # Helpers
+
+  # Expands inner query.
+  @spec expand_inner(module(), [query_call()], Context.t(), Core.parameters()) ::
+          Context.t()
+  @spec expand_inner(
+          module(),
+          [query_call()],
+          binary(),
+          Context.t(),
+          Core.parameters()
+        ) :: Context.t()
+  defp expand_inner(module, values, separator \\ " ", context, params)
+
+  defp expand_inner(module, values, separator, context, params)
+       when is_binary(separator) and is_list(values) do
+    values
+    |> Stream.intersperse(separator)
+    |> Enum.reduce(context, &expand_query(module, &1, &2, params))
+  end
+
+  # Expands a query.
+  @spec expand_query(
+          module(),
+          binary() | query_call(),
+          Context.t(),
+          Core.parameters()
+        ) :: Context.t()
+  defp expand_query(module, fragment, context, params)
+
+  defp expand_query(_module, separator, context, _params)
+       when is_binary(separator) do
+    Context.put_statement(context, "#{separator}")
+  end
+
+  defp expand_query(module, local_function, context, params)
+       when is_atom(local_function) do
+    expand_local_function(module, local_function, context, params)
+  end
+
+  defp expand_query(_module, remote_function, context, params)
+       when is_function(remote_function) do
+    expand_remote_function(remote_function, context, params)
+  end
+
+  defp expand_query(module, {function, params}, context, _) do
+    expand_query(module, function, context, params)
+  end
 
   # Expands local function
   @spec expand_local_function(module(), atom(), Context.t(), Core.parameters()) ::

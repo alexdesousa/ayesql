@@ -18,10 +18,33 @@ SQL DSLs by:
 - Allowing query composability with ease.
 - Working out of the box with PostgreSQL using
   [Ecto](https://github.com/elixir-ecto/ecto_sql) or
-  [Postgrex](https://github.com/elixir-ecto/postgrex):
+  [Postgrex](https://github.com/elixir-ecto/postgrex).
 - Being extended to support other databases via the behaviour `AyeSQL.Runner`.
 
-## Why raw SQL?
+If you want to know more why this project exists:
+
+- [SQL in Elixir](#sql-in-elixir)
+- [Why raw SQL?](#why-raw-sql)
+- [AyeSQL: Writing Raw SQL in Elixir (External Link)](https://thebroken.link/ayesql-writing-raw-sql-in-elixir/)
+
+If you want to know more about AyeSQL:
+
+- [Small example](#small-example)
+- [Syntax](#syntax)
+
+  + [Naming queries](#naming-queries)
+  + [Named parameters](#named-parameters)
+  + [Mandatory parameters](#mandatory-parameters)
+  + [Query composition](#query-composition)
+  + [Optional parameters](#optional-parameters)
+  + [IN statement](#in-statement)
+  + [Subqueries](#subqueries)
+
+- [Query runners](#query-runners)
+- [Running queries by default](#running-queries-by-default)
+- [Installation](#installation)
+
+## SQL in Elixir
 
 Writing and running raw SQL in Elixir is not pretty. Not only the lack of
 syntax highlighting is horrible, but also substituting parameters into the
@@ -59,14 +82,17 @@ from s in "server",
 
 Pretty straightforward and maintainable.
 
-If Ecto is so good for building queries, **why would you use raw SQL?**. Though
-Ecto is quite good with simple queries, complex queries often require the use
-of fragments, ruining the abstraction and making the code harder to read e.g:
+## Why raw SQL
 
-Let's say we have an
-[SQL query](https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0)
-to retrieve the click count of a certain type of link every day of the last `X`
-days. In raw SQL this could be written as:
+If Ecto is so good for building queries, **why would you use raw SQL?**. Though
+Ecto is quite good with simple queries, complex custom queries often require the
+use of fragments. Fragments are not pretty though there are workarounds using
+macros to make them prettier.
+
+It's easier to see with an example: let's say we have to
+[retrieve the click count of a certain type of link every day of the last N days]((https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0).
+
+With complex queries, developers tend to start writing them in raw SQL:
 
 ```sql
     WITH computed_dates AS (
@@ -85,10 +111,8 @@ GROUP BY dates.date
 ORDER BY dates.date;
 ```
 
-Where `$1` is the interval (`%Postgrex.Interval{}` struct) and `$2` is some
-link ID. The query is easy to understand and easy to maintain.
-
-The same query in Ecto could be written as:
+Once we have the raw SQL, it's a bit easier to write our Ecto query. In this
+case, this query should be written using fragments:
 
 ```elixir
 dates =
@@ -114,12 +138,73 @@ from(
 )
 ```
 
-The previous code is hard to read and hard to maintain:
+It's not the ideal solution (yet) and it's harder to maintain than the raw SQL
+solution that would work out-of-the-box.
 
-- Not only knowledge of SQL is required, but also knowledge of the
-intricacies of using Ecto fragments.
-- Queries using fragments cannot use aliases defined in schemas, so the
-code becomes inconsistent.
+Only to get to the previous solution, the developer need to:
+
+- Know the specific SQL dialect of the database they're using.
+- Know Ecto's API and its limitations.
+
+For both, raw SQL and Ecto query, the end result for this query would be the
+same. With extra effort we found a subpar solution that gives us the same
+result as our raw SQL.
+
+The final, and sometimes, optional step would be to transform the Ecto query
+into something a bit more maintainable.
+
+```elixir
+defmodule CustomDSL do
+  defmacro date(date) do
+    quote do
+      fragment("date(?)", unquote(date))
+    end
+  end
+
+  defmacro ndays(n) do
+    query =
+      """
+      SELECT generate_series(
+               current_date - ?::interval,
+               current_date - interval '1 day',
+               interval '1 day'
+             )::date AS d
+      """
+
+    quote do
+      fragment(unquote(query), unquote(n))
+    end
+  end
+end
+
+import CustomDSL
+
+from(
+  c in "clicks",
+  right_join: day in ndays(^days),
+  on: day.d == date(c.inserted_at),
+  where: c.link_id = ^link_id
+  group_by: day.d,
+  order_by: day.d,
+  select: %{
+    day: date(day.d)
+    count: count(c.id)
+  }
+)
+```
+
+The previous query is more readable, but requires knowledge of:
+
+- The specific SQL dialect.
+- Ecto's API and its limitations.
+- Elixir's macros.
+- Custom DSL API.
+
+For some problems, getting to this final stage is preferrable. However, for
+some other problems, the raw SQL query would have been enough.
+
+The raw SQL query was already a good solution to the problem. It only needs a
+maintainable way to be parametrized. That's why AyeSQL exists.
 
 ## Small Example
 
@@ -127,18 +212,17 @@ In AyeSQL, the equivalent would be to create an SQL file with the query e.g.
 `queries.sql`:
 
 ```sql
--- name: get_day_interval
--- This query do not have docs, so it's private.
-SELECT datetime::date AS date
-  FROM generate_series(
+-- file: queries.sql
+-- name: get_avg_clicks
+-- docs: Gets average click count.
+    WITH computed_dates AS (
+      SELECT datetime::date AS date
+      FROM generate_series(
         current_date - :days::interval, -- Named parameter :days
         current_date - interval '1 day',
         interval '1 day'
-      );
-
--- name: get_avg_clicks
--- docs: Gets average click count.
-    WITH computed_dates AS ( :get_day_interval ) -- Composing with another query
+      )
+    )
   SELECT dates.date AS day, count(clicks.id) AS count
     FROM computed_date AS dates
          LEFT JOIN clicks AS clicks ON date(clicks.inserted_at) = dates.date
@@ -151,6 +235,7 @@ In Elixir, we would load all the queries in this file by creating the following
 module:
 
 ```elixir
+# file: lib/queries.ex
 defmodule Queries do
   use AyeSQL, repo: MyRepo
 
@@ -161,10 +246,14 @@ end
 or using the macro `defqueries/3`:
 
 ```elixir
+# file: lib/queries.ex
 import AyeSQL, only: [defqueries: 3]
 
 defqueries(Queries, "queries.sql", repo: MyRepo)
 ```
+
+> **Note**: The file name used in `defqueries` macro should be relative to the
+> file where the macro is used.
 
 Both approaches will create a module called `Queries` with all the queries
 defined in `queries.sql`.
@@ -202,6 +291,7 @@ For the following sections we'll assume we have:
 
     defqueries(Queries, "queries.sql", repo: MyRepo)
     ```
+
 - Running the queries by default by adding the following in `config/config.exs`:
 
     ```elixir
@@ -388,7 +478,7 @@ iex> Queries.get_hostnames_by_architecture(params)
 > }
 > ```
 
-### `IN` Statement
+### IN Statement
 
 Lists in SQL might be tricky. That's why AyeSQL supports a special type for
 them e.g:
@@ -417,11 +507,58 @@ iex> Server.get_os_by_hostname(params)
 }
 ```
 
+### Subqueries
+
+Subqueries can be composed directly, as show before, or via the `:inner` tuple
+e.g. let's say we need to get the adults order by name in ascending order and
+age in descending order:
+
+```sql
+-- name: ascending
+ASC
+
+-- name: descending
+DESC
+
+-- name: by_age
+age :order_direction
+
+-- name: by_name
+name :order_direction
+
+-- name: get_adults
+-- docs: Gets adults.
+SELECT name, age
+  FROM person
+ WHERE age >= 18
+ORDER BY :order_by
+```
+
+Then our code in elixir would be:
+
+```elixir
+iex> order_by = [
+...>   by_name: [order_direction: :ascending],
+...>   by_age: [order_direction: :descending]
+...> ]
+iex> Queries.get_adults(order_by: {:inner, order_by, ", "})
+{:ok,
+  [
+    %{name: "Alice", age: 42},
+    %{name: "Bob", age: 21},
+    ...
+  ]
+}
+```
+
+> **Note**: If you're using this level of composability, consider using Ecto if
+> it fits your problem or stack.
+
 ## Query Runners
 
 The purpose of runners is to be able to implement other database adapters.
 
-By default, `AyeSQL` uses the runner `AyeSQL.Runner.Ecto`. This runner only has
+By default, AyeSQL uses the runner `AyeSQL.Runner.Ecto`. This runner only has
 one option which is `:repo` for the repo module. Additionally, it converts the
 result to a list of maps.
 
@@ -474,22 +611,21 @@ instead. For running queries by default, we can add the following to the
 config:
 
 ```elixir
-use Mix.Config
+import Config
 
-config :ayesql,
-  run?: true
+config :ayesql, run?: true
 ```
 
 And then we don't need to specify the `[run?: true]` options for every query.
 
 ## Installation
 
-`AyeSQL` is available as a Hex package. To install, add it to your
+AyeSQL is available as a Hex package. To install, add it to your
 dependencies in your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ayesql, "~> 0.5"}]
+  [{:ayesql, "~> 0.6"}]
 end
 ```
 
@@ -507,5 +643,5 @@ Alexander de Sousa.
 
 ## License
 
-`AyeSQL` is released under the MIT License. See the LICENSE file for further
+AyeSQL is released under the MIT License. See the LICENSE file for further
 details.

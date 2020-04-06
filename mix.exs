@@ -1,7 +1,7 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.5.5"
+  @version "0.6.0"
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do
@@ -13,6 +13,7 @@ defmodule Ayesql.MixProject do
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
+      dialyzer: dialyzer(),
       package: package(),
       deps: deps(),
       docs: docs()
@@ -41,8 +42,14 @@ defmodule Ayesql.MixProject do
       {:ecto_sql, ">= 2.0.0", optional: true},
       {:postgrex, ">= 0.0.0", optional: true},
       {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:credo, "~> 1.2", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0.0-rc.7", only: :dev, runtime: false}
+      {:credo, "~> 1.3", only: :dev, runtime: false},
+      {:dialyxir, "~> 1.0", only: :dev, runtime: false}
+    ]
+  end
+
+  defp dialyzer do
+    [
+      plt_add_apps: [:ecto, :ecto_sql, :postgrex]
     ]
   end
 
