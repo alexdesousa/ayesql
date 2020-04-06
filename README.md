@@ -541,7 +541,7 @@ iex> order_by = [
 ...>   by_name: [order_direction: :ascending],
 ...>   by_age: [order_direction: :descending]
 ...> ]
-iex> Queries.get_adults(order_by: {:inner, order_by, ","})
+iex> Queries.get_adults(order_by: {:inner, order_by, ", "})
 {:ok,
   [
     %{name: "Alice", age: 42},
