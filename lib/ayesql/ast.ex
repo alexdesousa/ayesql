@@ -5,8 +5,8 @@ defmodule AyeSQL.AST do
   alias AyeSQL.AST.Context
   alias AyeSQL.Core
   alias AyeSQL.Error
-  alias AyeSQL.Query
   alias AyeSQL.Parser
+  alias AyeSQL.Query
 
   @empty :"$AYESQL_EMPTY"
   @not_found :"$AYESQL_NOT_FOUND"

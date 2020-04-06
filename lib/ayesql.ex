@@ -131,8 +131,8 @@ defmodule AyeSQL do
   }
   ```
   """
-  alias AyeSQL.Query
   alias AyeSQL.Parser
+  alias AyeSQL.Query
 
   @doc """
   Uses `AyeSQL` for loading queries.
