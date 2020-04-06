@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.0
+
+### Enhancements
+
+  * Added support for subqueries with local scope.
+  * Improved documentation.
+
 ## v0.5.5
 
 ### Bug fix
