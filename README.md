@@ -90,7 +90,7 @@ use of fragments. Fragments are not pretty though there are workarounds using
 macros to make them prettier.
 
 It's easier to see with an example: let's say we have to
-[retrieve the click count of a certain type of link every day of the last N days]((https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0).
+[retrieve the click count of a certain type of link every day of the last N days](https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0).
 
 With complex queries, developers tend to start writing them in raw SQL:
 
