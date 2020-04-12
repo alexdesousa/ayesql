@@ -295,7 +295,7 @@ For the following sections we'll assume we have:
 - Running the queries by default by adding the following in `config/config.exs`:
 
     ```elixir
-    config ayesql, run?: true
+    config :ayesql, run?: true
     ```
 
 ### Naming Queries
