@@ -16,9 +16,9 @@ SQL DSLs by:
 - Generating Elixir functions for every query.
 - Supporting mandatory and optional named parameters.
 - Allowing query composability with ease.
-- Working out of the box with PostgreSQL using
-  [Ecto](https://github.com/elixir-ecto/ecto_sql),
-  [Postgrex](https://github.com/elixir-ecto/postgrex) or
+- Working out-of-the-box with PostgreSQL using
+  [Ecto](https://github.com/elixir-ecto/ecto_sql) or
+  [Postgrex](https://github.com/elixir-ecto/postgrex).
 - Working out-of-the-box with any database that has Ecto support
   e.g. MySQL via [MyXQL](https://github.com/elixir-ecto/myxql).
 - Being extended to support other databases via the behaviour `AyeSQL.Runner`.
