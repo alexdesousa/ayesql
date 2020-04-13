@@ -19,7 +19,8 @@ SQL DSLs by:
 - Working out of the box with PostgreSQL using
   [Ecto](https://github.com/elixir-ecto/ecto_sql),
   [Postgrex](https://github.com/elixir-ecto/postgrex) or
-  [MyXQL](https://github.com/elixir-ecto/myxql).
+- Working out-of-the-box with any database that has Ecto support
+  e.g. MySQL via [MyXQL](https://github.com/elixir-ecto/myxql).
 - Being extended to support other databases via the behaviour `AyeSQL.Runner`.
 
 If you want to know more why this project exists:
@@ -43,8 +44,7 @@ If you want to know more about AyeSQL:
 
 - [Query runners](#query-runners)
 - [Running queries by default](#running-queries-by-default)
-- [installation](#installation)
-- [Using a particular adapter for an Ecto repo](using-a-particular-adapter-for-an-ecto-repo)
+- [Installation](#installation)
 
 ## SQL in Elixir
 
@@ -638,21 +638,6 @@ their dependencies as well:
 - Add `:postgrex` for `AyeSQL.Runner.Postgrex`.
 - Add `:ecto_sql` and `:postgrex` for running queries using `Ecto` in a
   `PostgreSQL` database.
-- Add `:ecto_sql` and `:myxql` for running queries using `Ecto` in a
-  `MySql` database.
-
-### Using a particular adapter for an Ecto repo
-
-This is an example with `myxql` adapter but you may use the `postgres` adapter
-instead.
-
-```elixir
-defmodule MyApp.Repo do
-  use Ecto.Repo,
-    otp_app: :my_app,
-    adapter: Ecto.Adapters.MyXQL
-end
-```
 
 ## Author
 
