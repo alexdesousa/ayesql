@@ -77,8 +77,8 @@ defmodule AyeSQL.AST.Context do
   @spec put_statement(t(), nil | binary()) :: t()
   def put_statement(context, value \\ nil)
 
-  def put_statement(%Context{index: index} = context, nil) do
-    variable = "$#{inspect(index)}"
+  def put_statement(context, nil) do
+    variable = binding_placeholder(context)
     put_statement(context, variable)
   end
 
@@ -267,5 +267,21 @@ defmodule AyeSQL.AST.Context do
     |> String.replace(~r/\s+/, " ")
     |> String.trim()
     |> String.trim(";")
+  end
+
+  defp binding_placeholder(%Context{index: index}) do
+    if use_question_marks?() do
+      "?"
+    else
+      "$#{inspect(index)}"
+    end
+  end
+
+  @spec use_question_marks?() :: boolean()
+  defp use_question_marks? do
+    default = false
+    value = Application.get_env(:ayesql, :use_question_mark_bindings?, default)
+
+    if is_boolean(value), do: value, else: default
   end
 end
