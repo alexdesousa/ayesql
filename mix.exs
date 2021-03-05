@@ -1,7 +1,7 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.6.0"
+  @version "0.6.1"
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do

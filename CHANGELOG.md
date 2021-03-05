@@ -1,5 +1,12 @@
 # Changelog
 
+## v0.6.1
+
+### Bug fix
+
+  * [Dax Ravi](https://github.com/thdxr) fixed an infinite recursion problem
+    in fragment token regular expresion in the lexer.
+
 ## v0.6.0
 
 ### Enhancements
