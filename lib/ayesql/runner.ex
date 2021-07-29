@@ -8,7 +8,7 @@ defmodule AyeSQL.Runner do
   Callback to initialize the runner.
   """
   @callback run(query :: Query.t(), options :: keyword()) ::
-              {:ok, term()} | {:error, term()}
+              :ok | {:ok, term()} | {:error, term()}
 
   @doc """
   Uses the `AyeSQL.Runner` behaviour.
@@ -41,5 +41,14 @@ defmodule AyeSQL.Runner do
 
   def handle_result(result) do
     {:ok, result}
+  end
+
+  @doc false
+  @spec handle_result_stream(Enumerable.t()) :: Enumerable.t()
+  def handle_result_stream(stream) do
+    Stream.flat_map(stream, fn batch ->
+      {:ok, result} = handle_result(batch)
+      result
+    end)
   end
 end
