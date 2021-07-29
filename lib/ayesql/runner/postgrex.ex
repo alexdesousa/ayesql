@@ -54,7 +54,7 @@ if Code.ensure_loaded?(Postgrex) do
           transaction_options
         )
 
-        :ok
+        {:ok, nil}
       else
         with {:ok, result} <- Postgrex.query(conn, stmt, args) do
           Runner.handle_result(result)
