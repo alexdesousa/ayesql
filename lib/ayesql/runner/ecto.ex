@@ -75,10 +75,10 @@ if Code.ensure_loaded?(Ecto.Adapters.SQL) do
             nil | timeout()
           ) :: {:ok, :ok}
     defp stream(repo, stmt, args, stream_fun, stream_timeout) do
+      adapter_meta = Adapter.lookup_meta(repo)
+
       transaction_options =
         if stream_timeout, do: [timeout: stream_timeout], else: []
-
-      adapter_meta = Adapter.lookup_meta(repo)
 
       SQL.transaction(adapter_meta, transaction_options, fn ->
         SQL.stream(repo, stmt, args)
