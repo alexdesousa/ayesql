@@ -22,43 +22,34 @@ if Code.ensure_loaded?(Postgrex) do
     {:ok, ...}
     ```
 
-    Queries can be run in streaming mode with the `stream_into` / `stream_timeout` option:
+    Queries can be run in streaming mode with the `stream_fun` / `stream_timeout` option:
 
     ``elixir
-    iex> MyQueries.get_user([id: id], run?: true, conn: connection, stream_into: &IO.inspect/1)
+    iex> MyQueries.get_user([id: id], run?: true, conn: connection, stream_fun: &IO.inspect/1)
     :ok
     ```
+
+    The `stream_fun` function is called for each row in the stream, the whole
+    execution happens in a transaction (ref. `Postgrex.stream/4` docs).
+    `stream_timeout` option can be used to control the underlying Postgrex
+    transation `timeout` option.
     """
     use AyeSQL.Runner
 
     alias AyeSQL.Query
     alias AyeSQL.Runner
 
+    @type connection :: pid() | atom()
+
     @impl true
     def run(%Query{statement: stmt, arguments: args}, options) do
       conn = get_connection(options)
-      stream_into_fun = options[:stream_into]
+      stream? = Keyword.has_key?(options, :stream_fun)
 
-      if stream_into_fun do
-        timeout = options[:stream_timeout]
-        transaction_options = if timeout, do: [timeout: timeout], else: []
-
-        Postgrex.transaction(
-          conn,
-          fn conn ->
-            Postgrex.stream(conn, stmt, args)
-            |> Runner.handle_result_stream()
-            |> Stream.each(stream_into_fun)
-            |> Stream.run()
-          end,
-          transaction_options
-        )
-
-        {:ok, nil}
+      if stream? do
+        stream(conn, stmt, args, options[:stream_fun], options[:stream_timeout])
       else
-        with {:ok, result} <- Postgrex.query(conn, stmt, args) do
-          Runner.handle_result(result)
-        end
+        query(conn, stmt, args)
       end
     end
 
@@ -71,6 +62,39 @@ if Code.ensure_loaded?(Postgrex) do
       with nil <- options[:conn] do
         raise ArgumentError, "Connection `:conn` cannot be nil"
       end
+    end
+
+    @spec query(connection(), Query.statement(), Query.arguments()) ::
+            {:ok, [map()]}
+    defp query(conn, stmt, args) do
+      with {:ok, result} <- Postgrex.query(conn, stmt, args) do
+        Runner.handle_result(result)
+      end
+    end
+
+    @spec stream(
+            connection(),
+            Query.statement(),
+            Query.arguments(),
+            (map() -> any()),
+            nil | timeout()
+          ) :: {:ok, :ok}
+    defp stream(conn, stmt, args, stream_fun, stream_timeout) do
+      transaction_options =
+        if stream_timeout, do: [timeout: stream_timeout], else: []
+
+      Postgrex.transaction(
+        conn,
+        fn conn ->
+          Postgrex.stream(conn, stmt, args)
+          |> Runner.handle_result_stream()
+          |> Stream.each(stream_fun)
+          |> Stream.run()
+        end,
+        transaction_options
+      )
+
+      {:ok, :ok}
     end
   end
 end
