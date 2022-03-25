@@ -1,19 +1,29 @@
 defmodule Ayesql.MixProject do
   use Mix.Project
 
-  @version "0.6.1"
+  @version "1.0.0"
+  @name "AyeSQL"
+  @description "Library for using raw SQL"
+  @app :ayesql
   @root "https://github.com/alexdesousa/ayesql"
 
   def project do
     [
-      name: "AyeSQL",
-      app: :ayesql,
+      name: @name,
+      app: @app,
       version: @version,
-      elixir: "~> 1.8",
+      elixir: "~> 1.12",
       elixirc_paths: elixirc_paths(Mix.env()),
       build_embedded: Mix.env() == :prod,
       start_permanent: Mix.env() == :prod,
       dialyzer: dialyzer(),
+      test_coverage: [tool: ExCoveralls],
+      preferred_cli_env: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.github": :test
+      ],
       package: package(),
       deps: deps(),
       docs: docs()
@@ -23,33 +33,31 @@ defmodule Ayesql.MixProject do
   #############
   # Application
 
-  defp elixirc_paths(:test) do
-    ["lib", "test/support"]
-  end
-
-  defp elixirc_paths(_) do
-    ["lib"]
-  end
-
   def application do
     [
       extra_applications: [:logger]
     ]
   end
 
+  defp elixirc_paths(:test), do: ["lib", "test/support"]
+  defp elixirc_paths(_), do: ["lib"]
+
   defp deps do
     [
-      {:ecto_sql, ">= 2.0.0", optional: true},
+      {:ecto, "~> 3.7", optional: true},
+      {:ecto_sql, "~> 3.7", optional: true},
       {:postgrex, ">= 0.0.0", optional: true},
-      {:ex_doc, "~> 0.21", only: :dev, runtime: false},
-      {:credo, "~> 1.3", only: :dev, runtime: false},
-      {:dialyxir, "~> 1.0", only: :dev, runtime: false}
+      {:ex_doc, "~> 0.28", only: :dev, runtime: false},
+      {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
+      {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
+      {:excoveralls, "~> 0.14", only: :test, runtime: false}
     ]
   end
 
   defp dialyzer do
     [
-      plt_add_apps: [:ecto, :ecto_sql, :postgrex]
+      plt_add_apps: [:ecto, :ecto_sql, :postgrex],
+      plt_file: {:no_warn, "priv/plts/#{@app}.plt"}
     ]
   end
 
@@ -58,7 +66,7 @@ defmodule Ayesql.MixProject do
 
   defp package do
     [
-      description: "Library for using raw SQL",
+      description: @description,
       files: [
         "src/queries_lexer.xrl",
         "src/queries_parser.yrl",
@@ -83,12 +91,12 @@ defmodule Ayesql.MixProject do
   defp docs do
     [
       main: "readme",
+      extras: [
+        "README.md",
+        "CHANGELOG.md"
+      ],
       source_url: @root,
       source_ref: "v#{@version}",
-      formatters: ["html"],
-      extras: [
-        "README.md"
-      ],
       groups_for_modules: groups_for_modules()
     ]
   end
