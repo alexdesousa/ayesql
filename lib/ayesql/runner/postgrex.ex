@@ -18,7 +18,7 @@ if Code.ensure_loaded?(Postgrex) do
     query options:
 
     ```elixir
-    iex> MyQueries.get_user([id: id], run?: true, conn: connection)
+    iex> MyQueries.get_user([id: id], conn: connection)
     {:ok, ...}
     ```
     """
@@ -29,10 +29,12 @@ if Code.ensure_loaded?(Postgrex) do
 
     @impl true
     def run(%Query{statement: stmt, arguments: args}, options) do
+      query_options = Keyword.drop(options, [:conn, :into])
       conn = get_connection(options)
 
-      with {:ok, result} <- Postgrex.query(conn, stmt, args) do
-        Runner.handle_result(result)
+      with {:ok, result} <- Postgrex.query(conn, stmt, args, query_options) do
+        result = Runner.handle_result(result, options)
+        {:ok, result}
       end
     end
 

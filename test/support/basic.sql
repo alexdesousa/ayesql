@@ -5,6 +5,7 @@ SELECT hostname
 
 -- Simple query
 -- name: get_server_by_hostname
+-- docs: Simple query
 SELECT *
   FROM server
  WHERE hostname = :hostname;

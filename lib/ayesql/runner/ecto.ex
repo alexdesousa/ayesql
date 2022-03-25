@@ -21,10 +21,12 @@ if Code.ensure_loaded?(Ecto.Adapters.SQL) do
 
     @impl true
     def run(%Query{statement: stmt, arguments: args}, options) do
+      query_options = Keyword.drop(options, [:repo, :into])
       repo = get_repo(options)
 
-      with {:ok, result} <- SQL.query(repo, stmt, args) do
-        Runner.handle_result(result)
+      with {:ok, result} <- SQL.query(repo, stmt, args, query_options) do
+        result = Runner.handle_result(result, options)
+        {:ok, result}
       end
     end
 
@@ -36,10 +38,12 @@ if Code.ensure_loaded?(Ecto.Adapters.SQL) do
     defp get_repo(options) do
       repo = options[:repo]
 
-      if Code.ensure_loaded?(repo) do
-        repo
-      else
-        raise ArgumentError, "Invalid value for #{inspect(repo: repo)}"
+      case Code.ensure_loaded(repo) do
+        {:module, ^repo} ->
+          repo
+
+        _ ->
+          raise ArgumentError, "Invalid module for Ecto repo: #{inspect(repo)}"
       end
     end
   end

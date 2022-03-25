@@ -109,7 +109,7 @@ defmodule AyeSQL.Parser do
 
       def unquote(name)(params, options) do
         {index, options} = Keyword.pop(options, :index, 1)
-        {run?, options} = Keyword.pop(options, :run?, AyeSQL.Core.run?())
+        {run?, options} = Keyword.pop(options, :run, true)
 
         content = AyeSQL.AST.expand(__MODULE__, unquote(content))
         context = AyeSQL.AST.Context.new(index: index)
@@ -173,8 +173,7 @@ defmodule AyeSQL.Parser do
     ```
 
     with the following `options`:
-    - `run?` - Whether it should run the query or not. Defaults to
-      `#{AyeSQL.Core.run?()}`.
+    - `run` - Whether it should run the query or not.
 
     and generates/runs the query:
 

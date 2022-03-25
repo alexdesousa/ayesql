@@ -21,25 +21,22 @@ defmodule AyeSQL.Runner do
 
   # Handles the result.
   @doc false
-  @spec handle_result(map()) :: {:ok, [map()]}
-  def handle_result(result)
+  @spec handle_result(map()) :: [map() | struct()]
+  @spec handle_result(map(), keyword()) :: [map() | struct()]
+  def handle_result(result, options \\ [])
 
-  def handle_result(%{columns: nil}) do
-    {:ok, []}
+  def handle_result(%{columns: nil}, _options) do
+    []
   end
 
-  def handle_result(%{columns: columns, rows: rows}) do
+  def handle_result(%{columns: columns, rows: rows}, options) do
+    struct = options[:into]
     columns = Enum.map(columns, &String.to_atom/1)
 
-    result =
-      rows
-      |> Stream.map(&Stream.zip(columns, &1))
-      |> Enum.map(&Map.new/1)
-
-    {:ok, result}
-  end
-
-  def handle_result(result) do
-    {:ok, result}
+    rows
+    |> Stream.map(&Stream.zip(columns, &1))
+    |> Enum.map(fn row ->
+      if struct, do: struct(struct, row), else: Map.new(row)
+    end)
   end
 end

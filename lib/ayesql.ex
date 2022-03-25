@@ -17,11 +17,12 @@ defmodule AyeSQL do
   - Working out of the box with PostgreSQL using
     [Ecto](https://github.com/elixir-ecto/ecto_sql) or
     [Postgrex](https://github.com/elixir-ecto/postgrex):
-  - Being extended to support other databases via the behaviour `AyeSQL.Runner`.
+  - Being extended to support other databases using the behaviour
+    `AyeSQL.Runner`.
 
   ## Small Example
 
-  Let's say we have an
+  Let's say we have a
   [SQL query](https://stackoverflow.com/questions/39556763/use-ecto-to-generate-series-in-postgres-and-also-retrieve-null-values-as-0)
   to retrieve the click count of a certain type of link every day of the last `X`
   days. In raw SQL this could be written as:
@@ -120,7 +121,7 @@ defmodule AyeSQL do
   ...>   link_id: 42,
   ...>   days: %Postgrex.Interval{secs: 864_000} # 10 days
   ...> ]
-  iex> Queries.get_avg_clicks(params, run?: true)
+  iex> Queries.get_avg_clicks(params)
   {:ok,
     [
       %{day: ..., count: ...},
@@ -141,6 +142,7 @@ defmodule AyeSQL do
 
   Any other option will be passed to the runner.
   """
+  @spec __using__(keyword()) :: Macro.t()
   defmacro __using__(options) do
     {db_runner, db_options} = Keyword.pop(options, :runner, AyeSQL.Runner.Ecto)
 
@@ -239,7 +241,7 @@ defmodule AyeSQL do
   And finally we can inspect the query:
 
   ```
-  iex(1)> Queries.get_user!(username: "some_user")
+  iex(1)> Queries.get_user(username: "some_user", run: false)
   {:ok,
     %AyeSQL.Query{
       statement: "SELECT * FROM user WHERE username = $1",
@@ -251,20 +253,15 @@ defmodule AyeSQL do
   or run it:
 
   ```
-  iex(1)> Queries.get_user!(username: "some_user", run?: true)
+  iex(1)> Queries.get_user(username: "some_user")
   {:ok,
     [
       %{username: ..., ...}
     ]
   }
   ```
-
-  For running it by default, we can set the following in our configuration:
-
-  ```
-  config :ayesql, run?: true
-  ```
   """
+  @spec defqueries(Path.t()) :: [Macro.t()]
   defmacro defqueries(relative) do
     dirname = Path.dirname(__CALLER__.file)
     filename = Path.expand("#{dirname}/#{relative}")
@@ -291,6 +288,7 @@ defmodule AyeSQL do
   This will generate the module `Queries` and it'll contain all the SQL
   statements included in `sql/queries.sql`.
   """
+  @spec defqueries(module(), Path.t(), keyword()) :: Macro.t()
   defmacro defqueries(module, relative, options) do
     quote do
       defmodule unquote(module) do

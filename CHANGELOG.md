@@ -1,5 +1,17 @@
 # Changelog
 
+## v1.0.0
+
+### Enhancements
+
+  * Added support for specific runner options e.g. adding a `timeout` to the
+    `Postgrex` query.
+
+### Breaking changes
+
+  * Now it runs queries by default. To avoid running the queries, add the
+    option `run: false` on the module or the function calls.
+
 ## v0.6.1
 
 ### Bug fix

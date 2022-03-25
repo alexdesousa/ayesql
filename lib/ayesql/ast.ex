@@ -194,7 +194,7 @@ defmodule AyeSQL.AST do
   end
 
   defp expand_remote_function(fun, %Context{index: index} = context, params) do
-    case fun.(params, index: index, run?: false) do
+    case fun.(params, index: index, run: false) do
       {:ok, %Query{} = query} ->
         Context.merge_query(context, query)
 
