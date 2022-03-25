@@ -1,6 +1,6 @@
 # AyeSQL
 
-[![Build Status](https://travis-ci.org/alexdesousa/ayesql.svg?branch=master)](https://travis-ci.org/alexdesousa/ayesql) [![Hex pm](https://img.shields.io/hexpm/v/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql) [![hex.pm downloads](https://img.shields.io/hexpm/dt/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql)
+![Build status](https://github.com/alexdesousa/ayesql/actions/workflows/checks.yml/badge.svg) [![Hex pm](http://img.shields.io/hexpm/v/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql) [![hex.pm downloads](https://img.shields.io/hexpm/dt/ayesql.svg?style=flat)](https://hex.pm/packages/ayesql) [![Coverage Status](https://coveralls.io/repos/github/alexdesousa/ayesql/badge.svg?branch=master)](https://coveralls.io/github/alexdesousa/ayesql?branch=master)
 
 > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
 
@@ -43,7 +43,7 @@ If you want to know more about AyeSQL:
   + [Subqueries](#subqueries)
 
 - [Query runners](#query-runners)
-- [Running queries by default](#running-queries-by-default)
+- [Avoid running queries by default](#avoid-running-queries-by-default)
 - [Installation](#installation)
 
 ## SQL in Elixir
@@ -267,7 +267,7 @@ iex> params = [
 ...>   link_id: 42,
 ...>   days: %Postgrex.Interval{secs: 864_000} # 10 days
 ...> ]
-iex> Queries.get_avg_clicks(params, run?: true)
+iex> Queries.get_avg_clicks(params)
 {:ok,
   [
     %{day: ..., count: ...},
@@ -292,12 +292,6 @@ For the following sections we'll assume we have:
     import AyeSQL, only: [defqueries: 3]
 
     defqueries(Queries, "queries.sql", repo: MyRepo)
-    ```
-
-- Running the queries by default by adding the following in `config/config.exs`:
-
-    ```elixir
-    config :ayesql, run?: true
     ```
 
 ### Naming Queries
@@ -606,19 +600,29 @@ defmodule IdemRunner do
 end
 ```
 
-## Running Queries by Default
+## Avoid Running Queries by Default
 
-Queries are not run by default, but the `AyeSQL.Query.t()` struct is returned
-instead. For running queries by default, we can add the following to the
-config:
+Queries are run by default. To avoid this and get the `AyeSQL.Query.t()` struct
+instead, set the option `run: false` on the top of the module e.g:
 
 ```elixir
-import Config
+defmodule Queries do
+  use AyeSQL, repo: MyRepo, run: false
 
-config :ayesql, run?: true
+  defqueries("myqueries.sql")
+end
 ```
 
-And then we don't need to specify the `[run?: true]` options for every query.
+or when running a query:
+
+```elixir
+iex> params = [
+...>   link_id: 42,
+...>   days: %Postgrex.Interval{secs: 864_000} # 10 days
+...> ]
+iex> Queries.get_avg_clicks(params)
+{:ok, %AyeSQL.Query{statement: ..., arguments: ...}}
+```
 
 ## Installation
 
@@ -627,7 +631,7 @@ dependencies in your `mix.exs` file:
 
 ```elixir
 def deps do
-  [{:ayesql, "~> 0.6"}]
+  [{:ayesql, "~> 1.0"}]
 end
 ```
 

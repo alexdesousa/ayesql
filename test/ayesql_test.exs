@@ -80,7 +80,7 @@ defmodule AyeSQLTest do
     test "can expand query with empty params list" do
       stmt = "SELECT hostname FROM server"
 
-      assert {:ok, {^stmt, [], _}} = NoParam.get_hostnames([], run?: true)
+      assert {:ok, {^stmt, [], _}} = NoParam.get_hostnames([])
     end
   end
 
@@ -94,8 +94,7 @@ defmodule AyeSQLTest do
       args = ["localhost"]
       stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      assert {:ok, {^stmt, ^args, _}} =
-               Simple.get_server_by_hostname(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Simple.get_server_by_hostname(params)
     end
 
     test "can expand a regular param when is nil" do
@@ -103,13 +102,12 @@ defmodule AyeSQLTest do
       args = [nil]
       stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      assert {:ok, {^stmt, ^args, _}} =
-               Simple.get_server_by_hostname(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Simple.get_server_by_hostname(params)
     end
 
     test "errors on missing parameters" do
       assert {:error, %Error{errors: [hostname: :not_found]}} =
-               Simple.get_server_by_hostname([], run?: true)
+               Simple.get_server_by_hostname([])
     end
 
     test "ignores undefined params" do
@@ -117,8 +115,7 @@ defmodule AyeSQLTest do
       stmt = "SELECT * FROM server WHERE hostname = $1"
       args = ["localhost"]
 
-      assert {:ok, {^stmt, ^args, _}} =
-               Simple.get_server_by_hostname(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Simple.get_server_by_hostname(params)
     end
 
     test "accepts keyword list as parameters" do
@@ -126,8 +123,7 @@ defmodule AyeSQLTest do
       args = ["localhost"]
       stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      assert {:ok, {^stmt, ^args, _}} =
-               Simple.get_server_by_hostname(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Simple.get_server_by_hostname(params)
     end
 
     test "accepts map as parameters" do
@@ -135,8 +131,7 @@ defmodule AyeSQLTest do
       args = ["localhost"]
       stmt = "SELECT * FROM server WHERE hostname = $1"
 
-      assert {:ok, {^stmt, ^args, _}} =
-               Simple.get_server_by_hostname(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Simple.get_server_by_hostname(params)
     end
   end
 
@@ -150,7 +145,7 @@ defmodule AyeSQLTest do
       stmt = "SELECT * FROM server WHERE hostname = $1"
       args = ["localhost"]
 
-      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params)
     end
 
     test "can expand optional parameters when with function" do
@@ -163,7 +158,7 @@ defmodule AyeSQLTest do
       stmt = "SELECT * FROM server WHERE hostname = $1 AND location = $2"
       args = ["localhost", "Barcelona"]
 
-      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params)
     end
 
     test "can expand optional parameters when with function name" do
@@ -176,7 +171,7 @@ defmodule AyeSQLTest do
       stmt = "SELECT * FROM server WHERE hostname = $1 AND location = $2"
       args = ["localhost", "Barcelona"]
 
-      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Optional.get_servers(params)
     end
   end
 
@@ -190,22 +185,21 @@ defmodule AyeSQLTest do
       stmt = "SELECT * FROM people WHERE name IN ( $1,$2,$3 )"
       args = ["Alice", "Bob", "Charlie"]
 
-      assert {:ok, {^stmt, ^args, _}} =
-               InStatement.get_people(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = InStatement.get_people(params)
     end
 
     test "can expand with a function" do
       params = [names: &InStatement.get_names/2]
       stmt = "SELECT * FROM people WHERE name IN ( SELECT name FROM people )"
 
-      assert {:ok, {^stmt, [], _}} = InStatement.get_people(params, run?: true)
+      assert {:ok, {^stmt, [], _}} = InStatement.get_people(params)
     end
 
     test "can expand with a function name" do
       params = [names: :get_names]
       stmt = "SELECT * FROM people WHERE name IN ( SELECT name FROM people )"
 
-      assert {:ok, {^stmt, [], _}} = InStatement.get_people(params, run?: true)
+      assert {:ok, {^stmt, [], _}} = InStatement.get_people(params)
     end
   end
 
@@ -217,12 +211,12 @@ defmodule AyeSQLTest do
     test "can expand with a function name" do
       stmt = "SELECT * FROM ( SELECT name FROM people )"
 
-      assert {:ok, {^stmt, [], _}} = Composable.get_people([], run?: true)
+      assert {:ok, {^stmt, [], _}} = Composable.get_people([])
     end
 
     test "errors when inner query errors" do
       assert {:error, %Error{errors: [age: :not_found]}} =
-               Composable.get_adults([], run?: true)
+               Composable.get_adults([])
     end
   end
 
@@ -238,7 +232,7 @@ defmodule AyeSQLTest do
       stmt = "SELECT name, age FROM person WHERE age >= 18 AND name LIKE $1"
       args = ["Alice%"]
 
-      assert {:ok, {^stmt, ^args, _}} = Subquery.get_adults(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Subquery.get_adults(params)
     end
 
     test "can expand inner query with remote functions" do
@@ -253,7 +247,7 @@ defmodule AyeSQLTest do
       stmt = "SELECT name, age FROM person WHERE age >= 18 AND name LIKE $1"
       args = ["Alice%"]
 
-      assert {:ok, {^stmt, ^args, _}} = Subquery.get_adults(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Subquery.get_adults(params)
     end
 
     test "can use custom separator" do
@@ -269,8 +263,7 @@ defmodule AyeSQLTest do
 
       args = [18]
 
-      assert {:ok, {^stmt, ^args, _}} =
-               Subquery.get_people_by_age(params, run?: true)
+      assert {:ok, {^stmt, ^args, _}} = Subquery.get_people_by_age(params)
     end
   end
 
@@ -290,8 +283,7 @@ defmodule AyeSQLTest do
     end
 
     test "runs query with the correct module" do
-      assert {:ok, {_, [], [repo: MyRepo]}} =
-               WithRunner.get_hostnames([], run?: true)
+      assert {:ok, {_, [], [repo: MyRepo]}} = WithRunner.get_hostnames([])
     end
   end
 end

@@ -25,6 +25,9 @@ ayesql-*.tar
 # Ignore .iex.exs
 .iex.exs
 
+# Ignore PLTs
+/priv/plts/
+
 # Ignore Elixir language server files
 .elixir_ls
 

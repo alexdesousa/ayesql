@@ -7,7 +7,7 @@ defmodule AyeSQL.RunnerTest do
     test "when columns are nil, returns empty list" do
       data = %{columns: nil}
 
-      assert {:ok, []} = Runner.handle_result(data)
+      assert [] = Runner.handle_result(data)
     end
 
     test "when rows are not empty, returns a list of rows with columns" do
@@ -24,7 +24,7 @@ defmodule AyeSQL.RunnerTest do
         %{username: "alice", email: "alice@example.com"}
       ]
 
-      assert {:ok, ^expected} = Runner.handle_result(data)
+      assert ^expected = Runner.handle_result(data)
     end
   end
 end

@@ -22,29 +22,6 @@ defmodule AyeSQL.Core do
   """
   @type options :: keyword()
 
-  ############
-  # Public API
-
-  @doc """
-  Whether the queries should run by default or not.
-
-  You can set this in the configuration as:
-
-  ```elixir
-  use Mix.Config
-
-  config :ayesql,
-    run?: true
-  ```
-  """
-  @spec run?() :: boolean()
-  def run? do
-    default = false
-    value = Application.get_env(:ayesql, :run?, default)
-
-    if is_boolean(value), do: value, else: default
-  end
-
   ##########################
   # Query evaluation helpers
 
