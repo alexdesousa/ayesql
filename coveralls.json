@@ -1,0 +1,7 @@
+{
+  "skip_files": [
+    "test/support",
+    "src/queries_lexer.erl",
+    "src/queries_parser.erl"
+  ]
+}
