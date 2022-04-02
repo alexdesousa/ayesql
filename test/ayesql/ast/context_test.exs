@@ -125,7 +125,7 @@ defmodule AyeSQL.AST.ContextTest do
     end
   end
 
-  describe "mege/2" do
+  describe "merge/2" do
     test "merges two contexts" do
       context0 = Context.new(index: 1, statement: ["don't"])
       context1 = Context.new(index: 2, statement: ["panic"], arguments: [42])

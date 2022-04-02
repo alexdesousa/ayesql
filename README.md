@@ -202,7 +202,7 @@ The previous query is more readable, but requires knowledge of:
 - Elixir's macros.
 - Custom DSL API.
 
-For some problems, getting to this final stage is preferrable. However, for
+For some problems, getting to this final stage is preferable. However, for
 some other problems, the raw SQL query would have been enough.
 
 The raw SQL query was already a good solution to the problem. It only needs a
@@ -325,7 +325,7 @@ There are two types of named parameters:
   `:hostname`.
 - Optional: for query composability. The start with `:_` e.g. `:_order_by`.
 
-Additionaly, any query in a file can be accessed with its name adding `:` at
+Additionally, any query in a file can be accessed with its name adding `:` at
 the front e.g `:get_hostnames`.
 
 ### Mandatory Parameters
