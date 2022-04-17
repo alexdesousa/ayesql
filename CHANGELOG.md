@@ -1,5 +1,19 @@
 # Changelog
 
+## v 1.1.0
+
+### Enhancements
+
+  * Added new lexer with improved tokens. Now these tokens track:
+    + lines and columns for each token.
+    + original and modified contents.
+  * Added new parser with support for both named and unamed queries.
+  * Improved compiler errors. Now they show:
+    + line and columns where errors occur.
+    + surrounding lines containing the error.
+  * Added missing tests for the runners.
+  * Reorganized documentation.
+
 ## v1.0.0
 
 ### Enhancements
