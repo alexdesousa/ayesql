@@ -205,6 +205,8 @@ defmodule AyeSQL.AST do
 
   # Whether an atom is a query o not.
   @spec is_query?(module(), Core.parameter_name()) :: boolean()
+  defp is_query?(nil, _key), do: false
+
   defp is_query?(module, key) do
     :functions
     |> module.module_info()

@@ -132,7 +132,7 @@ defmodule AyeSQL do
   }
   ```
   """
-  alias AyeSQL.Parser
+  alias AyeSQL.Compiler
   alias AyeSQL.Query
 
   @doc """
@@ -265,10 +265,11 @@ defmodule AyeSQL do
   defmacro defqueries(relative) do
     dirname = Path.dirname(__CALLER__.file)
     filename = Path.expand("#{dirname}/#{relative}")
+    contents = File.read!(filename)
 
     [
       quote(do: @external_resource(unquote(filename))),
-      Parser.create_queries(filename)
+      Compiler.compile_queries(contents)
     ]
   end
 

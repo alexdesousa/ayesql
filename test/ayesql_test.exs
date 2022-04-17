@@ -27,7 +27,7 @@ defmodule AyeSQLTest do
 
   describe "when the parser errors" do
     test "throws exception" do
-      assert_raise CompileError, fn ->
+      assert_raise AyeSQL.CompileError, fn ->
         defmodule Wrong do
           use AyeSQL, runner: TestRunner
 
