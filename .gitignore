@@ -35,3 +35,4 @@ ayesql-*.tar
 src/queries_lexer.erl
 src/queries_parser.erl
 src/ayesql_lexer.erl
+src/ayesql_parser.erl
