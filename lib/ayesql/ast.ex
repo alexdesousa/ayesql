@@ -3,9 +3,9 @@ defmodule AyeSQL.AST do
   This module defines function for expanding the AST.
   """
   alias AyeSQL.AST.Context
+  alias AyeSQL.Compiler
   alias AyeSQL.Core
   alias AyeSQL.Error
-  alias AyeSQL.Parser
   alias AyeSQL.Query
 
   @empty :"$AYESQL_EMPTY"
@@ -49,7 +49,7 @@ defmodule AyeSQL.AST do
 
   # Expands tokens to functions.
   @doc false
-  @spec expand(module(), Parser.content()) :: [expand_function()]
+  @spec expand(module(), Compiler.fragments()) :: [expand_function()]
   def expand(module, content) when is_list(content) do
     Enum.map(content, &do_expand(module, &1))
   end

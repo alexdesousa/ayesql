@@ -195,6 +195,22 @@ defmodule AyeSQL do
     end
   end
 
+  @doc """
+  Evaluates the `contents` of a string with a query and generates an anonyous
+  function that receives parameters and options.
+  """
+  @spec eval_query(binary()) ::
+          (AyeSQL.Core.parameters(), AyeSQL.Core.options() ->
+             {:ok, AyeSQL.Query.t() | term()}
+             | {:error, AyeSQL.Error.t() | term()})
+          | no_return()
+  @spec eval_query(binary(), AyeSQL.Lexer.options()) ::
+          (AyeSQL.Core.parameters(), AyeSQL.Core.options() ->
+             {:ok, AyeSQL.Query.t() | term()}
+             | {:error, AyeSQL.Error.t() | term()})
+          | no_return()
+  defdelegate eval_query(contents, options \\ []), to: AyeSQL.Compiler
+
   # Runs a `stmt` with some `args` in an `app`.
   @doc false
   @spec run(module(), Query.t(), keyword()) ::
