@@ -34,3 +34,4 @@ ayesql-*.tar
 # Ignore generated parser and lexer.
 src/queries_lexer.erl
 src/queries_parser.erl
+src/ayesql_lexer.erl

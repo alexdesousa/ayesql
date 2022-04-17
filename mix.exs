@@ -1,4 +1,4 @@
-defmodule Ayesql.MixProject do
+defmodule AyeSQL.MixProject do
   use Mix.Project
 
   @version "1.0.0"
