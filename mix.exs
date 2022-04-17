@@ -68,8 +68,8 @@ defmodule AyeSQL.MixProject do
     [
       description: @description,
       files: [
-        "src/queries_lexer.xrl",
-        "src/queries_parser.yrl",
+        "src/ayesql_lexer.xrl",
+        "src/ayesql_parser.yrl",
         "lib",
         "mix.exs",
         "LICENSE",
@@ -111,8 +111,9 @@ defmodule AyeSQL.MixProject do
         AyeSQL.Query,
         AyeSQL.Error
       ],
-      "AyeSQL Parser": [
-        AyeSQL.Parser,
+      "AyeSQL Compiler": [
+        AyeSQL.Compiler,
+        AyeSQL.Lexer,
         AyeSQL.AST,
         AyeSQL.AST.Context
       ],
