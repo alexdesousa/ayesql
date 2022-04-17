@@ -47,6 +47,7 @@ defmodule AyeSQL.MixProject do
       {:ecto, "~> 3.7", optional: true},
       {:ecto_sql, "~> 3.7", optional: true},
       {:postgrex, ">= 0.0.0", optional: true},
+      {:mox, "~> 1.0", only: :test, runtime: false},
       {:ex_doc, "~> 0.28", only: :dev, runtime: false},
       {:credo, "~> 1.6", only: [:dev, :test], runtime: false},
       {:dialyxir, "~> 1.1", only: [:dev, :test], runtime: false},
