@@ -1,8 +1,8 @@
 defmodule AyeSQL do
   @moduledoc """
-  > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
-
   _AyeSQL_ is a library for using raw SQL.
+
+  > **Aye** _/ʌɪ/_ _exclamation (archaic dialect)_: said to express assent; yes.
 
   ## Overview
 

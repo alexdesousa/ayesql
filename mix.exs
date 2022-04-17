@@ -1,7 +1,7 @@
 defmodule AyeSQL.MixProject do
   use Mix.Project
 
-  @version "1.0.0"
+  @version "1.1.0"
   @name "AyeSQL"
   @description "Library for using raw SQL"
   @app :ayesql
@@ -57,7 +57,7 @@ defmodule AyeSQL.MixProject do
 
   defp dialyzer do
     [
-      plt_add_apps: [:ecto, :ecto_sql, :postgrex],
+      plt_add_apps: [:ecto, :ecto_sql, :postgrex, :db_connection],
       plt_file: {:no_warn, "priv/plts/#{@app}.plt"}
     ]
   end
@@ -75,13 +75,18 @@ defmodule AyeSQL.MixProject do
         "mix.exs",
         "LICENSE",
         "README.md",
-        "CHANGELOG.md"
+        "CHANGELOG.md",
+        "guides/why-raw-sql.md",
+        "guides/debugging-queries.md",
+        "guides/dynamic-queries-with-eex.md",
+        "guides/query-runners.md"
       ],
       maintainers: ["Alexander de Sousa"],
       licenses: ["MIT"],
       links: %{
         "Changelog" => "#{@root}/blob/master/CHANGELOG.md",
-        "Github" => @root
+        "Github" => @root,
+        "Sponsor" => "https://github.com/sponsors/alexdesousa"
       }
     ]
   end
@@ -91,14 +96,20 @@ defmodule AyeSQL.MixProject do
 
   defp docs do
     [
-      main: "readme",
-      extras: [
-        "README.md",
-        "CHANGELOG.md"
-      ],
       source_url: @root,
       source_ref: "v#{@version}",
-      groups_for_modules: groups_for_modules()
+      main: "readme",
+      groups_for_modules: groups_for_modules(),
+      extras: [
+        "README.md",
+        "CHANGELOG.md",
+        "guides/why-raw-sql.md",
+        "guides/debugging-queries.md",
+        "guides/dynamic-queries-with-eex.md",
+        "guides/query-runners.md"
+      ],
+      extra_section: "TOPICS",
+      groups_for_extras: groups_for_extras()
     ]
   end
 
@@ -123,6 +134,14 @@ defmodule AyeSQL.MixProject do
         AyeSQL.Runner.Ecto,
         AyeSQL.Runner.Postgrex
       ]
+    ]
+  end
+
+  defp groups_for_extras do
+    [
+      Introduction: ~r/README\.md/,
+      Topics: ~r/guides\/[^\/]+\.md/,
+      Changelog: "CHANGELOG.md"
     ]
   end
 end

@@ -56,7 +56,7 @@ new_token(Name, Value, String, Line, Len) ->
 
 new_fragment(TokenLine, TokenLen, "--" ++ _ = TokenChars) ->
   new_comment(TokenLine, TokenLen, TokenChars);
-new_fragment(TokenLine, TokenLen, "") ->
+new_fragment(TokenLine, _, "") ->
   {token, {eof, TokenLine}};
 new_fragment(TokenLine, TokenLen, TokenChars) ->
   new_token("fragment", TokenChars, TokenChars, TokenLine, TokenLen).
