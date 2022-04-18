@@ -195,6 +195,8 @@ defmodule AyeSQL.Compiler do
       def unquote(name)(params, options \\ [])
 
       def unquote(name)(params, options) do
+        options = Keyword.merge(__MODULE__.__db_options__(), options)
+
         {index, options} = Keyword.pop(options, :index, 1)
         {run?, options} = Keyword.pop(options, :run, true)
 

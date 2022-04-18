@@ -177,9 +177,7 @@ defmodule AyeSQL do
       def run(query, options \\ [])
 
       def run(%Query{} = query, options) do
-        db_options = Keyword.merge(@__db_options__, options)
-
-        AyeSQL.run(@__db_runner__, query, db_options)
+        AyeSQL.run(@__db_runner__, query, options)
       end
 
       ########################
