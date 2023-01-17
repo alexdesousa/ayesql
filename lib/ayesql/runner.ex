@@ -42,6 +42,7 @@ defmodule AyeSQL.Runner do
           nil -> Enum.into(row, %{})
           Map -> Enum.into(row, %{})
           Keyword -> Enum.into(row, [])
+          enum when enum == [] or enum == %{} -> Enum.into(row, enum)
           struct -> struct(struct, row)
         end
       end)
