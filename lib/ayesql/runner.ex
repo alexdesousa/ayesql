@@ -29,14 +29,22 @@ defmodule AyeSQL.Runner do
     []
   end
 
-  def handle_result(%{columns: columns, rows: rows}, options) do
-    struct = options[:into]
-    columns = Enum.map(columns, &String.to_atom/1)
+  def handle_result(%{columns: columns, rows: rows} = raw_data, options) do
+    if options[:into] == :raw do
+      raw_data
+    else
+      atom_columns = Stream.map(columns, &String.to_atom/1)
 
-    rows
-    |> Stream.map(&Stream.zip(columns, &1))
-    |> Enum.map(fn row ->
-      if struct, do: struct(struct, row), else: Map.new(row)
-    end)
+      rows
+      |> Stream.map(&Stream.zip(atom_columns, &1))
+      |> Enum.map(fn row ->
+        case options[:into] do
+          nil -> Enum.into(row, %{})
+          Map -> Enum.into(row, %{})
+          Keyword -> Enum.into(row, [])
+          struct -> struct(struct, row)
+        end
+      end)
+    end
   end
 end
