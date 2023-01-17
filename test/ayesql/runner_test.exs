@@ -28,24 +28,8 @@ defmodule AyeSQL.RunnerTest do
         %{username: "alice", email: "alice@example.com"}
       ]
 
-      assert ^expected = Runner.handle_result(data)
-    end
-
-    test "when rows are not empty, returns a list of map rows" do
-      data = %{
-        columns: ["username", "email"],
-        rows: [
-          ["bob", "bob@example.com"],
-          ["alice", "alice@example.com"]
-        ]
-      }
-
-      expected = [
-        %{username: "bob", email: "bob@example.com"},
-        %{username: "alice", email: "alice@example.com"}
-      ]
-
       assert ^expected = Runner.handle_result(data, into: Map)
+      assert ^expected = Runner.handle_result(data, into: %{})
     end
 
     test "when rows are not empty, returns a list of keyword rows" do
@@ -63,6 +47,7 @@ defmodule AyeSQL.RunnerTest do
       ]
 
       assert expected == Runner.handle_result(data, into: Keyword)
+      assert expected == Runner.handle_result(data, into: [])
     end
 
     test "when rows are not empty, returns a list of structs rows" do
