@@ -131,6 +131,38 @@ defmodule AyeSQL do
     ]
   }
   ```
+  AyeSQL also allows you to choose the type of returned data structures.
+  Instead of the default map you can also pass an into option to your query
+  possible values are:
+  - Map or %{}
+  - Keyword or []
+  - A struct
+  - :raw - will return unmodified Postgrex result
+
+  ```elixir
+  iex> Queries.get_avg_clicks(params, into: Keyword)
+  {:ok,
+    [
+      [day: ..., count: ...],
+      [day: ..., count: ...],
+      [day: ..., count: ...],
+      ...
+    ]
+  }
+  ```
+
+  ```elixir
+  iex> defmodule AvgClicks do defstruct [:day, :count] end
+  iex> Queries.get_avg_clicks(params, into: AvgClicks)
+  {:ok,
+    [
+      %AvgClicks{day: ..., count: ...},
+      %AvgClicks{day: ..., count: ...},
+      %AvgClicks{day: ..., count: ...},
+      ...
+    ]
+  }
+  ```
   """
   alias AyeSQL.Compiler
   alias AyeSQL.Query
