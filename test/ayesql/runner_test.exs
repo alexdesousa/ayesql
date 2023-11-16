@@ -28,7 +28,6 @@ defmodule AyeSQL.RunnerTest do
         %{username: "alice", email: "alice@example.com"}
       ]
 
-      assert ^expected = Runner.handle_result(data, into: Map)
       assert ^expected = Runner.handle_result(data, into: %{})
     end
 
@@ -46,7 +45,6 @@ defmodule AyeSQL.RunnerTest do
         [username: "alice", email: "alice@example.com"]
       ]
 
-      assert expected == Runner.handle_result(data, into: Keyword)
       assert expected == Runner.handle_result(data, into: [])
     end
 
@@ -64,7 +62,7 @@ defmodule AyeSQL.RunnerTest do
         %User{username: "alice", email: "alice@example.com"}
       ]
 
-      assert expected == Runner.handle_result(data, into: User)
+      assert expected == Runner.handle_result(data, into: %User{})
     end
 
     test "when rows are not empty, returns a raw result with columns and rows" do
