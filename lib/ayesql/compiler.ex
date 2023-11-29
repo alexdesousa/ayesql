@@ -297,7 +297,7 @@ defmodule AyeSQL.Compiler do
           no_return()
   defp raise_error(
          contents,
-         {line, _, ['syntax error before: ', info]},
+         {line, _, [~c"syntax error before: ", info]},
          options
        ) do
     error_context = options[:error_context] || 2
