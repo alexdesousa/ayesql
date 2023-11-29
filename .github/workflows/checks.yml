@@ -13,20 +13,15 @@ env:
 jobs:
   test:
     runs-on: ubuntu-latest
-
-    strategy:
-      matrix:
-        elixir: [1.13.0]
-        otp: [24.1.7]
-
+    env:
+      MIX_ENV: "test"
     steps:
       - uses: actions/checkout@v2
-      - uses: actions/setup-elixir@v1
+      - uses: erlef/setup-beam@v1
         name: "Setup Elixir"
         with:
-          experimental-otp: true
-          otp-version: ${{ matrix.otp }}
-          elixir-version: ${{ matrix.elixir }}
+          otp-version: "26.1.2"
+          elixir-version: "1.15.7"
       - name: "Get dependencies"
         run: mix do local.rebar --force, local.hex --force, deps.get
       - name: "Compile dependencies"
