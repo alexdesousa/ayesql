@@ -136,7 +136,7 @@ defmodule AyeSQL do
   possible values are:
   - an empty map: `Map.new()` or `%{}`
   - an empty list: Keyword.new()` or `[]`
-  - A struct
+  - a struct
   - `:raw` - will return unmodified Postgrex result
 
   ```elixir
