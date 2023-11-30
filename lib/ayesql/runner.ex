@@ -22,7 +22,8 @@ defmodule AyeSQL.Runner do
   # Handles the result.
   @doc false
   @spec handle_result(map()) :: [map() | struct() | keyword()]
-  @spec handle_result(map(), keyword()) :: [map() | struct() | keyword()]
+  @spec handle_result(map(), map() | keyword()) ::
+          [map() | struct() | keyword()]
   def handle_result(result, options \\ [])
 
   def handle_result(data, options) when is_list(options) do
