@@ -1,6 +1,15 @@
 # Changelog
 
-## v 1.1.0
+## v1.1.2
+
+### Enhancements
+
+  * Updated dependencies.
+  * Fixed CI.
+  * Runners are now more flexible and can return the raw `Postgrex` result or
+    inside maps, keyword list and custom structs.
+
+## v1.1.0
 
 ### Enhancements
 
