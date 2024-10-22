@@ -47,6 +47,7 @@ defmodule AyeSQL.MixProject do
       {:ecto, "~> 3.11", optional: true},
       {:ecto_sql, "~> 3.11", optional: true},
       {:postgrex, ">= 0.0.0", optional: true},
+      {:duckdbex, "~> 0.3", optional: true},
       {:mox, "~> 1.1", only: :test, runtime: false},
       {:ex_doc, "~> 0.30", only: :dev, runtime: false},
       {:credo, "~> 1.7", only: [:dev, :test], runtime: false},
