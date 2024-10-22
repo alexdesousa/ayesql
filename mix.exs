@@ -134,7 +134,8 @@ defmodule AyeSQL.MixProject do
       "AyeSQL runners": [
         AyeSQL.Runner,
         AyeSQL.Runner.Ecto,
-        AyeSQL.Runner.Postgrex
+        AyeSQL.Runner.Postgrex,
+        AyeSQL.Runner.Duckdbex
       ]
     ]
   end
