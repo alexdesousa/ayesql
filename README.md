@@ -19,6 +19,8 @@ SQL DSLs. This library aims to:
 - Work out-of-the-box with PostgreSQL using
   [Ecto](https://github.com/elixir-ecto/ecto_sql) or
   [Postgrex](https://github.com/elixir-ecto/postgrex).
+- Work out-of-the-box woth DuckDB using
+  [Duckdbex](https://github.com/AlexR2D2/duckdbex).
 
 If you want to know more about AyeSQL:
 
@@ -403,6 +405,7 @@ their dependencies as well:
 
 - Add `:ecto_sql` for `AyeSQL.Runner.Ecto` (default runner).
 - Add `:postgrex` for `AyeSQL.Runner.Postgrex`.
+- Add `duckdbex` for `AyeSQL.Runner.Duckdbex`.
 - Add `:ecto_sql` and `:postgrex` for running queries using `Ecto` in a
   `PostgreSQL` database.
 
