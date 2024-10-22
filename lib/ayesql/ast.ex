@@ -63,7 +63,7 @@ defmodule AyeSQL.AST do
   end
 
   defp do_expand(module, key) when is_atom(key) do
-    if is_query?(module, key) do
+    if query?(module, key) do
       expand_function_fn(module, key)
     else
       expand_param_fn(module, key)
@@ -174,7 +174,7 @@ defmodule AyeSQL.AST do
   defp expand_local_function(module, local, context, params)
 
   defp expand_local_function(module, value, %Context{} = context, params) do
-    if is_query?(module, value) do
+    if query?(module, value) do
       expand_remote_function({module, value}, context, params)
     else
       Context.put_variable(context, value)
@@ -204,10 +204,10 @@ defmodule AyeSQL.AST do
   end
 
   # Whether an atom is a query o not.
-  @spec is_query?(module(), Core.parameter_name()) :: boolean()
-  defp is_query?(nil, _key), do: false
+  @spec query?(module(), Core.parameter_name()) :: boolean()
+  defp query?(nil, _key), do: false
 
-  defp is_query?(module, key) do
+  defp query?(module, key) do
     :functions
     |> module.module_info()
     |> Enum.member?({key, 2})
