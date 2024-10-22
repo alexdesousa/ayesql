@@ -1,5 +1,12 @@
 # Changelog
 
+## v1.1.3
+
+### Enhancements
+
+  * Updated dependencies.
+  * Added Duckdbex query runner.
+
 ## v1.1.2
 
 ### Enhancements
