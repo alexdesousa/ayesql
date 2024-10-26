@@ -19,7 +19,7 @@ SQL DSLs. This library aims to:
 - Work out-of-the-box with PostgreSQL using
   [Ecto](https://github.com/elixir-ecto/ecto_sql) or
   [Postgrex](https://github.com/elixir-ecto/postgrex).
-- Work out-of-the-box woth DuckDB using
+- Work out-of-the-box with DuckDB using
   [Duckdbex](https://github.com/AlexR2D2/duckdbex).
 
 If you want to know more about AyeSQL:
