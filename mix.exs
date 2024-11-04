@@ -1,7 +1,7 @@
 defmodule AyeSQL.MixProject do
   use Mix.Project
 
-  @version "1.1.3"
+  @version "1.1.4"
   @name "AyeSQL"
   @description "Library for using raw SQL"
   @app :ayesql
