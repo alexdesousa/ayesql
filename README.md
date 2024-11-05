@@ -299,7 +299,7 @@ iex> Queries.get_hostnames_by_architecture(params)
 > `Queries.descending/2`
 >
 > ```elixir
-> iex> params = [architecture: "AMD64", _order_by: Queries.descending/2]
+> iex> params = [architecture: "AMD64", _order_by: &Queries.descending/2]
 > iex> Queries.get_hostnames_by_architecture(params)
 > {:ok,
 >   [
