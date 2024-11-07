@@ -11,6 +11,7 @@ NewLine    = (\n|\r)+
 
 FunName    = {NewLine}*{WhiteSpace}*(\-\-)\sname\:\s[^\n\r]+
 FunDocs    = {NewLine}*{WhiteSpace}*(\-\-)\sdocs\:\s[^\n\r]+
+FunFrag    = {NewLine}*{WhiteSpace}*(\-\-)\sfragment\:\s[^\n\r]+
 Comment    = (\-\-)[^\n\r]+
 
 Atom       = [a-z_][0-9a-zA-Z_]*
@@ -26,7 +27,7 @@ Rules.
 
 {FunName}                           : new_comment(TokenLine, TokenLen, TokenChars).
 {FunDocs}                           : new_comment(TokenLine, TokenLen, TokenChars).
-
+{FunFrag}                           : new_comment(TokenLine, TokenLen, TokenChars).
 {NamedParam}                        : new_param(TokenLine, TokenLen, TokenChars).
 ({Comment}?|({String}|{Fragment})+) : new_fragment(TokenLine, TokenLen, TokenChars).
 
@@ -67,6 +68,9 @@ new_comment(TokenLine, TokenLen, "-- name: " ++ Value = TokenChars) ->
 new_comment(TokenLine, TokenLen, "-- docs: " ++ Value = TokenChars) ->
   Documentation = string:trim(Value),
   new_token("docs", Documentation, TokenChars, TokenLine, TokenLen);
+new_comment(TokenLine, TokenLen, "-- fragment: " ++ Value = TokenChars) ->
+  Fragment = string:trim(Value),
+  new_token("query_fragment_metadata", Fragment, TokenChars, TokenLine, TokenLen);
 new_comment(_, _, "--" ++ _) ->
   skip_token;
 new_comment(TokenLine, TokenLen, TokenChars) ->

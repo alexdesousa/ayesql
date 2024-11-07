@@ -32,7 +32,7 @@ defmodule AyeSQL.Compiler do
   @typedoc """
   Query.
   """
-  @type query :: {name(), docs(), fragments()}
+  @type query :: {name(), docs(), fragments(), boolean()}
 
   @typedoc """
   Queries.
@@ -137,21 +137,36 @@ defmodule AyeSQL.Compiler do
   end
 
   @spec create_queries(queries()) :: Macro.t() | [Macro.t()]
-  @spec create_queries(queries(), [Macro.t()]) :: Macro.t() | [Macro.t()]
-  defp create_queries(queries, acc \\ [])
+  @spec create_queries(queries(), [Macro.t()], [queries()]) ::
+          Macro.t() | [Macro.t()]
+  defp create_queries(queries, acc \\ [], metadata \\ [])
 
-  defp create_queries([{nil, nil, fragments}], _acc) do
+  # Handle anonymous queries (3-tuple format)
+  defp create_queries([{nil, nil, fragments}], _acc, _metadata) do
     create_single_query(fragments)
   end
 
-  defp create_queries([], acc) do
-    Enum.reverse(acc)
+  # Handle named queries (4-tuple format with is_fragment)
+  defp create_queries([], acc, metadata) do
+    # Extract fragment names from the original metadata tuples
+    fragment_names = for {name, _docs, _fragments, true} <- metadata, do: name
+
+    fragment_func =
+      quote do
+        def fragment_functions(), do: unquote(fragment_names)
+      end
+
+    [fragment_func | Enum.reverse(acc)]
   end
 
-  defp create_queries([{_name, _docs, _fragments} = query | queries], acc) do
+  defp create_queries(
+         [{_name, _docs, _fragments, _is_fragment} = query | queries],
+         acc,
+         metadata
+       ) do
+    # Keep the original tuple in metadata for later processing
     acc = [create_query!(query), create_query(query) | acc]
-
-    create_queries(queries, acc)
+    create_queries(queries, acc, [query | metadata])
   end
 
   @spec create_single_query(fragments()) :: Macro.t()
@@ -181,11 +196,12 @@ defmodule AyeSQL.Compiler do
   end
 
   @spec create_query(query()) :: Macro.t()
-  defp create_query({name, docs, fragments}) do
+  defp create_query({name, docs, fragments, _is_fragment}) do
     fragments = Macro.escape(fragments)
 
     quote do
       @doc AyeSQL.Compiler.gen_docs(unquote(docs), unquote(fragments))
+
       @spec unquote(name)(AyeSQL.Core.parameters()) ::
               {:ok, AyeSQL.Query.t() | term()}
               | {:error, AyeSQL.Error.t() | term()}
@@ -215,11 +231,12 @@ defmodule AyeSQL.Compiler do
   end
 
   @spec create_query!(query()) :: Macro.t()
-  defp create_query!({name, docs, _}) do
+  defp create_query!({name, docs, _, _is_fragment}) do
     name! = String.to_atom("#{name}!")
 
     quote do
       @doc AyeSQL.Compiler.gen_docs!(unquote(docs))
+
       @spec unquote(name!)(AyeSQL.Core.parameters()) ::
               AyeSQL.Query.t()
               | term()

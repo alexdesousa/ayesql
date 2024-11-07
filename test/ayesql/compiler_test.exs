@@ -9,6 +9,31 @@ defmodule AyeSQL.CompilerTest do
         Compiler.compile_queries("SELECT * FROM table")
       end
     end
+
+    test "should succeed when docs are provided after name" do
+      contents = """
+      -- name: function_name
+      -- docs: Documentation
+      Query
+      """
+
+      [tuple | _rest] = Compiler.compile_queries(contents)
+      assert is_tuple(tuple)
+      assert elem(tuple, 0) == :def
+    end
+
+    test "should succeed when fragment: true is specified" do
+      contents = """
+      -- name: function_name
+      -- docs: Documentation
+      -- fragment: true
+      Query
+      """
+
+      [tuple | _rest] = Compiler.compile_queries(contents)
+      assert is_tuple(tuple)
+      assert elem(tuple, 0) == :def
+    end
   end
 
   describe "eval_query/2" do

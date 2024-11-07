@@ -324,4 +324,17 @@ defmodule AyeSQLTest do
       assert {:ok, {_, [], [repo: MyRepo]}} = WithRunner.get_hostnames([])
     end
   end
+
+  test "correctly identifies fragment functions" do
+    defmodule FragmentTest do
+      use AyeSQL, runner: TestRunner, repo: MyRepo
+
+      defqueries("support/fragments.sql")
+    end
+
+    # Add debug output
+    IO.puts("Module attributes: #{inspect(FragmentTest.__info__(:attributes))}")
+
+    assert FragmentTest.fragment_functions() == [:user_fields]
+  end
 end

@@ -23,6 +23,16 @@ defmodule AyeSQL.LexerTest do
     end
   end
 
+  describe "fragment boolean" do
+    test "gets fragment metadata" do
+      target = "-- fragment: true"
+
+      assert [
+               {:"$query_fragment_metadata", 1, {"true", ^target, {1, 1}}}
+             ] = Lexer.tokenize(target)
+    end
+  end
+
   describe "comments" do
     test "ignores comments" do
       target = """

@@ -34,6 +34,7 @@ defmodule AyeSQL.Lexer do
   @type token_name ::
           :"$name"
           | :"$docs"
+          | :"$query_fragment_metadata"
           | :"$fragment"
           | :"$named_param"
 
