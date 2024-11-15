@@ -1,7 +1,7 @@
 # Query Runners
 
 `AyeSQL` can be extended to support more databases than PostgreSQL by implementing
-the behaviour `AyeSQL.Runner`. This library ships with two runners already:
+the behaviour `AyeSQL.Runner`. This library ships with three runners already:
 
 - `AyeSQL.Runner.Ecto`, (it's the default and assumes PostgreSQL is the database).
 - `AyeSQL.Runner.Postgrex`,
