@@ -4,7 +4,8 @@
 the behaviour `AyeSQL.Runner`. This library ships with two runners already:
 
 - `AyeSQL.Runner.Ecto`, (it's the default and assumes PostgreSQL is the database).
-- `AyeSQL.Runner.Postgrex`.
+- `AyeSQL.Runner.Postgrex`,
+- `AyeSQL.Runner.Duckdbex`.
 
 By default, AyeSQL uses the runner `AyeSQL.Runner.Ecto`. This runner only has
 one option which is `:repo` for the repo module. Additionally, it converts the
