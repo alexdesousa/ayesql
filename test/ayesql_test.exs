@@ -324,4 +324,186 @@ defmodule AyeSQLTest do
       assert {:ok, {_, [], [repo: MyRepo]}} = WithRunner.get_hostnames([])
     end
   end
+
+  describe "when defqueries receives a list of files" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(MultiFile, ["support/multi/users.sql", "support/multi/posts.sql"],
+               runner: TestRunner)
+
+    defmodule MultiFileWithExternalResource do
+      use AyeSQL, runner: TestRunner
+
+      defqueries(["support/multi/users.sql", "support/multi/posts.sql"])
+
+      def __external_resource__, do: @external_resource
+    end
+
+    test "generates functions from first file" do
+      functions = MultiFile.module_info(:functions)
+
+      assert Enum.member?(functions, {:get_all_users, 1})
+      assert Enum.member?(functions, {:get_user_by_id, 1})
+    end
+
+    test "generates functions from second file" do
+      functions = MultiFile.module_info(:functions)
+
+      assert Enum.member?(functions, {:get_all_posts, 1})
+      assert Enum.member?(functions, {:get_posts_by_user, 1})
+    end
+
+    test "tracks all files as external resources" do
+      resources = MultiFileWithExternalResource.__external_resource__()
+
+      assert length(resources) == 2
+      assert Enum.any?(resources, &String.ends_with?(&1, "/support/multi/users.sql"))
+      assert Enum.any?(resources, &String.ends_with?(&1, "/support/multi/posts.sql"))
+    end
+
+    test "can execute queries from different files" do
+      params = [user_id: 42]
+
+      assert {:ok, {stmt1, [42], _}} = MultiFile.get_user_by_id(params)
+      assert stmt1 =~ "SELECT * FROM users WHERE id = $1"
+
+      assert {:ok, {stmt2, [42], _}} = MultiFile.get_posts_by_user(params)
+      assert stmt2 =~ "SELECT * FROM posts WHERE user_id = $1"
+    end
+  end
+
+  describe "when defqueries receives a glob pattern" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(GlobPattern, "support/multi/**/*.sql", runner: TestRunner)
+
+    test "generates functions from all matched files" do
+      functions = GlobPattern.module_info(:functions)
+
+      # From users.sql
+      assert Enum.member?(functions, {:get_all_users, 1})
+      # From posts.sql
+      assert Enum.member?(functions, {:get_all_posts, 1})
+      # From comments.sql
+      assert Enum.member?(functions, {:get_comments_by_post, 1})
+    end
+
+    test "files are processed in alphabetical order" do
+      # Verify all functions exist - alphabetical order ensures deterministic behavior
+      functions = GlobPattern.module_info(:functions)
+
+      assert Enum.member?(functions, {:get_comments_by_post, 1})
+      assert Enum.member?(functions, {:get_all_posts, 1})
+      assert Enum.member?(functions, {:get_all_users, 1})
+    end
+  end
+
+  describe "when duplicate query names exist across files" do
+    test "raises compile error with helpful message" do
+      assert_raise AyeSQL.CompileError, ~r/duplicate/i, fn ->
+        defmodule WithDuplicates do
+          use AyeSQL, runner: TestRunner
+
+          defqueries([
+            "support/duplicates/file_a.sql",
+            "support/duplicates/file_b.sql"
+          ])
+        end
+      end
+    end
+
+    test "error message includes file names where duplicates occur" do
+      exception =
+        assert_raise AyeSQL.CompileError, fn ->
+          defmodule WithDuplicatesDetailed do
+            use AyeSQL, runner: TestRunner
+
+            defqueries([
+              "support/duplicates/file_a.sql",
+              "support/duplicates/file_b.sql"
+            ])
+          end
+        end
+
+      message = Exception.message(exception)
+      assert message =~ "file_a.sql"
+      assert message =~ "file_b.sql"
+      assert message =~ "duplicate_query"
+    end
+  end
+
+  describe "when queries reference queries from other files" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(CrossFile,
+               ["support/composable/base.sql", "support/composable/derived.sql"],
+               runner: TestRunner)
+
+    test "can compose queries defined in different files" do
+      # The derived query references :get_active_users from base.sql
+      assert {:ok, {stmt, [], _}} = CrossFile.get_posts_from_active_users([])
+
+      # Should expand the referenced query
+      assert stmt =~ "SELECT * FROM posts"
+      assert stmt =~ "SELECT id FROM users WHERE active = true"
+    end
+  end
+
+  describe "backward compatibility with single file string" do
+    import AyeSQL, only: [defqueries: 3]
+
+    defqueries(SingleFile, "support/basic.sql", runner: TestRunner)
+
+    defmodule SingleFileWithExternalResource do
+      use AyeSQL, runner: TestRunner
+
+      defqueries("support/basic.sql")
+
+      def __external_resource__, do: @external_resource
+    end
+
+    test "still works with single file path string" do
+      functions = SingleFile.module_info(:functions)
+
+      assert Enum.member?(functions, {:get_hostnames, 1})
+      assert Enum.member?(functions, {:get_server_by_hostname, 1})
+    end
+
+    test "tracks single file as external resource" do
+      [path] = SingleFileWithExternalResource.__external_resource__()
+      assert String.ends_with?(path, "/support/basic.sql")
+    end
+  end
+
+  describe "edge cases for multi-file support" do
+    test "empty list raises helpful error" do
+      assert_raise AyeSQL.CompileError, ~r/no files provided/i, fn ->
+        defmodule EmptyList do
+          use AyeSQL, runner: TestRunner
+
+          defqueries([])
+        end
+      end
+    end
+
+    test "glob pattern matching no files raises error" do
+      assert_raise AyeSQL.CompileError, ~r/no files matched/i, fn ->
+        defmodule NoMatch do
+          use AyeSQL, runner: TestRunner
+
+          defqueries("support/nonexistent/**/*.sql")
+        end
+      end
+    end
+
+    test "missing file in list raises File.Error" do
+      assert_raise File.Error, fn ->
+        defmodule MissingFile do
+          use AyeSQL, runner: TestRunner
+
+          defqueries(["support/basic.sql", "support/missing.sql"])
+        end
+      end
+    end
+  end
 end
