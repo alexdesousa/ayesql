@@ -16,6 +16,7 @@ SQL DSLs. This library aims to:
 - Generate easy to use Elixir functions for every query.
 - Parameterize queries using maps and keyword lists.
 - Allow query composablity.
+- Support loading from multiple files or glob patterns.
 - Work out-of-the-box with PostgreSQL using
   [Ecto](https://github.com/elixir-ecto/ecto_sql) or
   [Postgrex](https://github.com/elixir-ecto/postgrex).
@@ -25,6 +26,7 @@ SQL DSLs. This library aims to:
 If you want to know more about AyeSQL:
 
 - [Small example](#small-example)
+- [Multi-file support](#multi-file-support)
 - [Syntax](#syntax)
 
   + [Naming queries](#naming-queries)
@@ -113,6 +115,85 @@ iex> Queries.get_avg_clicks(params)
     ...
   ]
 }
+```
+
+## Multi-file Support
+
+For larger projects, you can organize your SQL queries across multiple files and
+load them all at once. AyeSQL supports both explicit file lists and glob patterns.
+
+### Loading Multiple Files
+
+You can pass a list of file paths to `defqueries`:
+
+```elixir
+defmodule MyApp.Queries do
+  use AyeSQL, repo: MyApp.Repo
+
+  defqueries([
+    "sql/users.sql",
+    "sql/posts.sql",
+    "sql/comments.sql"
+  ])
+end
+```
+
+### Using Glob Patterns
+
+Or use glob patterns to automatically load all matching files:
+
+```elixir
+defmodule MyApp.Queries do
+  use AyeSQL, repo: MyApp.Repo
+
+  # Load all .sql files in the sql/ directory and subdirectories
+  defqueries("sql/**/*.sql")
+end
+```
+
+This is particularly useful for organizing queries by domain or feature:
+
+```
+sql/
+├── orders/
+│   ├── reads.sql
+│   └── writes.sql
+├── clients/
+│   └── clients.sql
+└── payments/
+    └── payments.sql
+```
+
+### Multi-file Behavior
+
+When using multiple files:
+
+- **Alphabetical ordering**: Files are processed in alphabetical order by their
+  full path, ensuring deterministic and predictable behavior.
+
+- **Unique query names**: All query names must be unique across all loaded files.
+  If duplicate names are found, a compile-time error will be raised with details
+  about which files contain the duplicates.
+
+- **Cross-file composition**: Queries can reference other queries from any loaded
+  file using the `:query_name` syntax, enabling composition across your entire
+  query library.
+
+- **Recompilation tracking**: Each file is registered as an `@external_resource`,
+  so your module will automatically recompile when any SQL file changes.
+
+### Example with the `defqueries/3` Macro
+
+The standalone macro also supports multi-file loading:
+
+```elixir
+import AyeSQL, only: [defqueries: 3]
+
+# List of files
+defqueries(Queries, ["sql/users.sql", "sql/posts.sql"], repo: MyRepo)
+
+# Glob pattern
+defqueries(Queries, "sql/**/*.sql", repo: MyRepo)
 ```
 
 ## Syntax

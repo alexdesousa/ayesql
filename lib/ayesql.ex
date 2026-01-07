@@ -275,6 +275,29 @@ defmodule AyeSQL do
   end
   ```
 
+  ## Multi-file Support
+
+  You can load queries from multiple files using a list or glob patterns:
+
+  ```
+  # file: lib/queries.ex
+  defmodule Queries do
+    use AyeSQL, repo: MyRepo
+
+    # List of files
+    defqueries(["sql/users.sql", "sql/posts.sql", "sql/comments.sql"])
+
+    # Or using glob patterns
+    defqueries("sql/**/*.sql")
+  end
+  ```
+
+  **Important notes for multi-file usage:**
+  - Files matched by glob patterns are processed in alphabetical order
+  - All query names must be unique across all files
+  - Each file is tracked as an `@external_resource` for recompilation
+  - Queries can reference other queries from any file using `:query_name` syntax
+
   or the macro `defqueries/3`:
 
   ```
@@ -282,6 +305,10 @@ defmodule AyeSQL do
   import AyeSQL, only: [defqueries: 3]
 
   defqueries(Queries, "sql/queries.ex", repo: MyRepo)
+
+  # Multi-file examples
+  defqueries(Queries, ["sql/users.sql", "sql/posts.sql"], repo: MyRepo)
+  defqueries(Queries, "sql/**/*.sql", repo: MyRepo)
   ```
 
   And finally we can inspect the query:
@@ -307,20 +334,163 @@ defmodule AyeSQL do
   }
   ```
   """
-  @spec defqueries(Path.t()) :: [Macro.t()]
-  defmacro defqueries(relative) do
-    dirname = Path.dirname(__CALLER__.file)
-    filename = Path.expand("#{dirname}/#{relative}")
-    contents = File.read!(filename)
 
-    [
-      quote(do: @external_resource(unquote(filename))),
-      Compiler.compile_queries(contents)
-    ]
+  ####################
+  # Helper Functions #
+  ####################
+
+  # Resolves input to list of absolute file paths
+  @spec resolve_files(Path.t(), Path.t() | [Path.t()]) :: [Path.t()]
+  defp resolve_files(dirname, path) when is_binary(path) do
+    cond do
+      String.contains?(path, ["*", "?", "["]) ->
+        expand_glob(dirname, path)
+
+      true ->
+        [Path.expand("#{dirname}/#{path}")]
+    end
+  end
+
+  defp resolve_files(dirname, paths) when is_list(paths) do
+    paths
+    |> Enum.map(&Path.expand("#{dirname}/#{&1}"))
+    |> Enum.sort()
+  end
+
+  # Expands glob pattern to sorted list
+  @spec expand_glob(Path.t(), Path.t()) :: [Path.t()]
+  defp expand_glob(dirname, pattern) do
+    full_pattern = "#{dirname}/#{pattern}"
+
+    case Path.wildcard(full_pattern) do
+      [] ->
+        raise AyeSQL.CompileError,
+          contents: "",
+          line: 1,
+          header: "No files matched pattern: #{pattern}",
+          filename: "defqueries"
+
+      files ->
+        Enum.sort(files)
+    end
+  end
+
+  # Loads all files with metadata
+  @spec load_files([Path.t()]) :: [{Path.t(), binary()}]
+  defp load_files([]) do
+    raise AyeSQL.CompileError,
+      contents: "",
+      line: 1,
+      header: "No files provided to defqueries",
+      filename: "defqueries"
+  end
+
+  defp load_files(files) do
+    Enum.map(files, fn file ->
+      {file, File.read!(file)}
+    end)
+  end
+
+  # Merges contents from multiple files
+  @spec merge_contents([{Path.t(), binary()}]) :: binary()
+  defp merge_contents(contents_with_metadata) do
+    contents_with_metadata
+    |> Enum.map(fn {_file, contents} -> contents end)
+    |> Enum.join("\n\n")
+  end
+
+  # Checks for duplicate query names
+  @spec check_duplicates!([{Path.t(), binary()}]) :: :ok
+  defp check_duplicates!(contents_with_metadata) do
+    name_to_files =
+      contents_with_metadata
+      |> Enum.flat_map(fn {file, contents} ->
+        extract_query_names(contents)
+        |> Enum.map(fn name -> {name, file} end)
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    duplicates =
+      name_to_files
+      |> Enum.filter(fn {_name, files} -> length(files) > 1 end)
+      |> Enum.into(%{})
+
+    unless Enum.empty?(duplicates) do
+      raise_duplicate_error!(duplicates)
+    end
+
+    :ok
+  end
+
+  # Extracts query names from SQL contents
+  @spec extract_query_names(binary()) :: [atom()]
+  defp extract_query_names(contents) do
+    case AyeSQL.Lexer.tokenize(contents) |> :ayesql_parser.parse() do
+      {:ok, queries} ->
+        queries
+        |> Enum.map(fn {name, _docs, _fragments} -> name end)
+        |> Enum.reject(&is_nil/1)
+
+      {:error, _} ->
+        []
+    end
+  end
+
+  # Raises error for duplicates
+  @spec raise_duplicate_error!(%{atom() => [Path.t()]}) :: no_return()
+  defp raise_duplicate_error!(duplicates) do
+    details =
+      duplicates
+      |> Enum.map(fn {name, files} ->
+        file_list = Enum.map_join(files, ", ", &Path.basename/1)
+        "  - #{name}: found in #{file_list}"
+      end)
+      |> Enum.join("\n")
+
+    raise AyeSQL.CompileError,
+      contents: "",
+      line: 1,
+      header: """
+      Duplicate query names found across multiple files:
+
+      #{details}
+
+      Each query name must be unique across all loaded files.
+      """,
+      filename: "defqueries"
+  end
+
+  @spec defqueries(Path.t() | [Path.t()]) :: [Macro.t()]
+  defmacro defqueries(path_or_paths) do
+    dirname = Path.dirname(__CALLER__.file)
+
+    # Resolve to list of absolute paths
+    files = resolve_files(dirname, path_or_paths)
+
+    # Load all files
+    contents_with_metadata = load_files(files)
+
+    # Check for duplicates
+    check_duplicates!(contents_with_metadata)
+
+    # Merge contents
+    combined_contents = merge_contents(contents_with_metadata)
+
+    # Track all files as external resources
+    external_resources =
+      Enum.map(files, fn file ->
+        quote(do: @external_resource(unquote(file)))
+      end)
+
+    # Compile queries
+    compiled = Compiler.compile_queries(combined_contents)
+
+    # Return both external resources and compiled queries
+    external_resources ++ [compiled]
   end
 
   @doc """
-  Macro to load queries from a `file` and create a module for them.
+  Macro to load queries from one or more files and create a module for them.
 
   Same as `defqueries/1`, but creates a module e.g for the query file
   `lib/sql/queries.sql` we can use this macro as follows:
@@ -332,19 +502,32 @@ defmodule AyeSQL do
   defqueries(Queries, "sql/queries.sql", repo: MyRepo)
   ```
 
+  ## Multi-file Support
+
+  You can also load from multiple files or glob patterns:
+
+  ```
+  # List of files
+  defqueries(Queries, ["sql/users.sql", "sql/posts.sql"], repo: MyRepo)
+
+  # Glob pattern
+  defqueries(Queries, "sql/**/*.sql", repo: MyRepo)
+  ```
+
   This will generate the module `Queries` and it'll contain all the SQL
-  statements included in `sql/queries.sql`.
+  statements included in the specified file(s). See `defqueries/1` for more
+  details on multi-file behavior.
   """
-  @spec defqueries(module(), Path.t(), keyword()) :: Macro.t()
-  defmacro defqueries(module, relative, options) do
+  @spec defqueries(module(), Path.t() | [Path.t()], keyword()) :: Macro.t()
+  defmacro defqueries(module, path_or_paths, options) do
     quote do
       defmodule unquote(module) do
         @moduledoc """
-        This module defines functions for queries in `#{unquote(relative)}`
+        This module defines functions for queries in `#{unquote(path_or_paths)}`
         """
         use AyeSQL, unquote(options)
 
-        defqueries(unquote(relative))
+        defqueries(unquote(path_or_paths))
       end
     end
   end
