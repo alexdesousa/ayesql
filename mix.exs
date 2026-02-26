@@ -19,12 +19,6 @@ defmodule AyeSQL.MixProject do
       compilers: [:leex, :yecc | Mix.compilers()],
       dialyzer: dialyzer(),
       test_coverage: [tool: ExCoveralls],
-      preferred_cli_env: [
-        coveralls: :test,
-        "coveralls.detail": :test,
-        "coveralls.html": :test,
-        "coveralls.github": :test
-      ],
       package: package(),
       deps: deps(),
       docs: docs()
@@ -37,6 +31,17 @@ defmodule AyeSQL.MixProject do
   def application do
     [
       extra_applications: [:logger]
+    ]
+  end
+
+  def cli do
+    [
+      preferred_envs: [
+        coveralls: :test,
+        "coveralls.detail": :test,
+        "coveralls.html": :test,
+        "coveralls.github": :test
+      ]
     ]
   end
 
