@@ -328,8 +328,11 @@ defmodule AyeSQLTest do
   describe "when defqueries receives a list of files" do
     import AyeSQL, only: [defqueries: 3]
 
-    defqueries(MultiFile, ["support/multi/users.sql", "support/multi/posts.sql"],
-               runner: TestRunner)
+    defqueries(
+      MultiFile,
+      ["support/multi/users.sql", "support/multi/posts.sql"],
+      runner: TestRunner
+    )
 
     defmodule MultiFileWithExternalResource do
       use AyeSQL, runner: TestRunner
@@ -357,8 +360,16 @@ defmodule AyeSQLTest do
       resources = MultiFileWithExternalResource.__external_resource__()
 
       assert length(resources) == 2
-      assert Enum.any?(resources, &String.ends_with?(&1, "/support/multi/users.sql"))
-      assert Enum.any?(resources, &String.ends_with?(&1, "/support/multi/posts.sql"))
+
+      assert Enum.any?(
+               resources,
+               &String.ends_with?(&1, "/support/multi/users.sql")
+             )
+
+      assert Enum.any?(
+               resources,
+               &String.ends_with?(&1, "/support/multi/posts.sql")
+             )
     end
 
     test "can execute queries from different files" do
@@ -435,9 +446,11 @@ defmodule AyeSQLTest do
   describe "when queries reference queries from other files" do
     import AyeSQL, only: [defqueries: 3]
 
-    defqueries(CrossFile,
-               ["support/composable/base.sql", "support/composable/derived.sql"],
-               runner: TestRunner)
+    defqueries(
+      CrossFile,
+      ["support/composable/base.sql", "support/composable/derived.sql"],
+      runner: TestRunner
+    )
 
     test "can compose queries defined in different files" do
       # The derived query references :get_active_users from base.sql

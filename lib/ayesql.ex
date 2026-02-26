@@ -334,132 +334,6 @@ defmodule AyeSQL do
   }
   ```
   """
-
-  ####################
-  # Helper Functions #
-  ####################
-
-  # Resolves input to list of absolute file paths
-  @spec resolve_files(Path.t(), Path.t() | [Path.t()]) :: [Path.t()]
-  defp resolve_files(dirname, path) when is_binary(path) do
-    cond do
-      String.contains?(path, ["*", "?", "["]) ->
-        expand_glob(dirname, path)
-
-      true ->
-        [Path.expand("#{dirname}/#{path}")]
-    end
-  end
-
-  defp resolve_files(dirname, paths) when is_list(paths) do
-    paths
-    |> Enum.map(&Path.expand("#{dirname}/#{&1}"))
-    |> Enum.sort()
-  end
-
-  # Expands glob pattern to sorted list
-  @spec expand_glob(Path.t(), Path.t()) :: [Path.t()]
-  defp expand_glob(dirname, pattern) do
-    full_pattern = "#{dirname}/#{pattern}"
-
-    case Path.wildcard(full_pattern) do
-      [] ->
-        raise AyeSQL.CompileError,
-          contents: "",
-          line: 1,
-          header: "No files matched pattern: #{pattern}",
-          filename: "defqueries"
-
-      files ->
-        Enum.sort(files)
-    end
-  end
-
-  # Loads all files with metadata
-  @spec load_files([Path.t()]) :: [{Path.t(), binary()}]
-  defp load_files([]) do
-    raise AyeSQL.CompileError,
-      contents: "",
-      line: 1,
-      header: "No files provided to defqueries",
-      filename: "defqueries"
-  end
-
-  defp load_files(files) do
-    Enum.map(files, fn file ->
-      {file, File.read!(file)}
-    end)
-  end
-
-  # Merges contents from multiple files
-  @spec merge_contents([{Path.t(), binary()}]) :: binary()
-  defp merge_contents(contents_with_metadata) do
-    contents_with_metadata
-    |> Enum.map(fn {_file, contents} -> contents end)
-    |> Enum.join("\n\n")
-  end
-
-  # Checks for duplicate query names
-  @spec check_duplicates!([{Path.t(), binary()}]) :: :ok
-  defp check_duplicates!(contents_with_metadata) do
-    name_to_files =
-      contents_with_metadata
-      |> Enum.flat_map(fn {file, contents} ->
-        extract_query_names(contents)
-        |> Enum.map(fn name -> {name, file} end)
-      end)
-      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
-
-    duplicates =
-      name_to_files
-      |> Enum.filter(fn {_name, files} -> length(files) > 1 end)
-      |> Enum.into(%{})
-
-    unless Enum.empty?(duplicates) do
-      raise_duplicate_error!(duplicates)
-    end
-
-    :ok
-  end
-
-  # Extracts query names from SQL contents
-  @spec extract_query_names(binary()) :: [atom()]
-  defp extract_query_names(contents) do
-    case AyeSQL.Lexer.tokenize(contents) |> :ayesql_parser.parse() do
-      {:ok, queries} ->
-        queries
-        |> Enum.map(fn {name, _docs, _fragments} -> name end)
-        |> Enum.reject(&is_nil/1)
-
-      {:error, _} ->
-        []
-    end
-  end
-
-  # Raises error for duplicates
-  @spec raise_duplicate_error!(%{atom() => [Path.t()]}) :: no_return()
-  defp raise_duplicate_error!(duplicates) do
-    details =
-      duplicates
-      |> Enum.map(fn {name, files} ->
-        file_list = Enum.map_join(files, ", ", &Path.basename/1)
-        "  - #{name}: found in #{file_list}"
-      end)
-      |> Enum.join("\n")
-
-    raise AyeSQL.CompileError,
-      contents: "",
-      line: 1,
-      header: """
-      Duplicate query names found across multiple files:
-
-      #{details}
-
-      Each query name must be unique across all loaded files.
-      """,
-      filename: "defqueries"
-  end
-
   @spec defqueries(Path.t() | [Path.t()]) :: [Macro.t()]
   defmacro defqueries(path_or_paths) do
     dirname = Path.dirname(__CALLER__.file)
@@ -530,5 +404,128 @@ defmodule AyeSQL do
         defqueries(unquote(path_or_paths))
       end
     end
+  end
+
+  ##################
+  # Helper functions
+
+  # Resolves input to list of absolute file paths
+  @spec resolve_files(Path.t(), Path.t() | [Path.t()]) :: [Path.t()]
+  defp resolve_files(dirname, path) when is_binary(path) do
+    if String.contains?(path, ["*", "?", "["]) do
+      expand_glob(dirname, path)
+    else
+      [Path.expand("#{dirname}/#{path}")]
+    end
+  end
+
+  defp resolve_files(dirname, paths) when is_list(paths) do
+    paths
+    |> Stream.map(&Path.expand("#{dirname}/#{&1}"))
+    |> Enum.sort()
+  end
+
+  # Expands glob pattern to sorted list
+  @spec expand_glob(Path.t(), Path.t()) :: [Path.t()]
+  defp expand_glob(dirname, pattern) do
+    full_pattern = "#{dirname}/#{pattern}"
+
+    case Path.wildcard(full_pattern) do
+      [] ->
+        raise AyeSQL.CompileError,
+          contents: "",
+          line: 1,
+          header: "No files matched pattern: #{pattern}",
+          filename: "defqueries"
+
+      files ->
+        Enum.sort(files)
+    end
+  end
+
+  # Loads all files with metadata
+  @spec load_files([Path.t()]) :: [{Path.t(), binary()}]
+  defp load_files([]) do
+    raise AyeSQL.CompileError,
+      contents: "",
+      line: 1,
+      header: "No files provided to defqueries",
+      filename: "defqueries"
+  end
+
+  defp load_files(files) do
+    Enum.map(files, fn file ->
+      {file, File.read!(file)}
+    end)
+  end
+
+  # Merges contents from multiple files
+  @spec merge_contents([{Path.t(), binary()}]) :: binary()
+  defp merge_contents(contents_with_metadata) do
+    contents_with_metadata
+    |> Stream.map(fn {_file, contents} -> contents end)
+    |> Enum.join("\n\n")
+  end
+
+  # Checks for duplicate query names
+  @spec check_duplicates!([{Path.t(), binary()}]) :: :ok
+  defp check_duplicates!(contents_with_metadata) do
+    name_to_files =
+      contents_with_metadata
+      |> Stream.flat_map(fn {file, contents} ->
+        contents
+        |> extract_query_names()
+        |> Enum.map(fn name -> {name, file} end)
+      end)
+      |> Enum.group_by(&elem(&1, 0), &elem(&1, 1))
+
+    duplicates =
+      name_to_files
+      |> Stream.filter(fn {_name, files} -> length(files) > 1 end)
+      |> Enum.into(%{})
+
+    unless Enum.empty?(duplicates) do
+      raise_duplicate_error!(duplicates)
+    end
+
+    :ok
+  end
+
+  # Extracts query names from SQL contents
+  @spec extract_query_names(binary()) :: [atom()]
+  defp extract_query_names(contents) do
+    case AyeSQL.Lexer.tokenize(contents) |> :ayesql_parser.parse() do
+      {:ok, queries} ->
+        queries
+        |> Stream.map(fn {name, _docs, _fragments} -> name end)
+        |> Enum.reject(&is_nil/1)
+
+      {:error, _} ->
+        []
+    end
+  end
+
+  # Raises error for duplicates
+  @spec raise_duplicate_error!(%{atom() => [Path.t()]}) :: no_return()
+  defp raise_duplicate_error!(duplicates) do
+    details =
+      duplicates
+      |> Stream.map(fn {name, files} ->
+        file_list = Enum.map_join(files, ", ", &Path.basename/1)
+        "  - #{name}: found in #{file_list}"
+      end)
+      |> Enum.join("\n")
+
+    raise AyeSQL.CompileError,
+      contents: "",
+      line: 1,
+      header: """
+      Duplicate query names found across multiple files:
+
+      #{details}
+
+      Each query name must be unique across all loaded files.
+      """,
+      filename: "defqueries"
   end
 end

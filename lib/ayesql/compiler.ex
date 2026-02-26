@@ -170,6 +170,7 @@ defmodule AyeSQL.Compiler do
         context = AyeSQL.AST.Context.new(index: index)
 
         with {:ok, query} <- AyeSQL.Core.evaluate(content, params, context) do
+          # credo:disable-for-next-line
           if run? do
             AyeSQL.run(db_runner, query, db_options)
           else
