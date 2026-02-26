@@ -1,5 +1,13 @@
 # Changelog
 
+## v1.1.4
+
+### Enhancements
+
+  * Updated dependencies.
+  * [Denis Donici](https://github.com/gevera) added multi file support in
+    `defqueries` macros.
+
 ## v1.1.3
 
 ### Enhancements
