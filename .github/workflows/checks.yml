@@ -7,21 +7,26 @@ on:
     branches: [ master ]
 
 env:
-  MIX_ENV: test
   GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
 jobs:
   test:
     runs-on: ubuntu-latest
+    name: "Test OTP ${{ matrix.otp }} / Elixir ${{ matrix.elixir }}"
+    strategy:
+      matrix:
+        otp: ['28.3.2']
+        elixir: ['1.19.5']
     env:
       MIX_ENV: "test"
     steps:
-      - uses: actions/checkout@v2
+      - uses: actions/checkout@v4
+        name: "Checkout repository"
       - uses: erlef/setup-beam@v1
         name: "Setup Elixir"
         with:
-          otp-version: "27.1.2"
-          elixir-version: "1.17.3"
+          otp-version: ${{ matrix.otp }}
+          elixir-version: ${{ matrix.elixir }}
       - name: "Get dependencies"
         run: mix do local.rebar --force, local.hex --force, deps.get
       - name: "Compile dependencies"
