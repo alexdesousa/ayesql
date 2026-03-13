@@ -9,8 +9,8 @@ NewLine    = (\n|\r)+
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 % Comments and special directives
 
-FunName    = {NewLine}*(\-\-)\sname\:\s[^\n\r]+
-FunDocs    = {NewLine}*(\-\-)\sdocs\:\s[^\n\r]+
+FunName    = {NewLine}*{WhiteSpace}*(\-\-)\sname\:\s[^\n\r]+
+FunDocs    = {NewLine}*{WhiteSpace}*(\-\-)\sdocs\:\s[^\n\r]+
 Comment    = (\-\-)[^\n\r]+
 
 Atom       = [a-z_][0-9a-zA-Z_]*
